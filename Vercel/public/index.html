@@ -1,0 +1,2928 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOSIS NAGA - POS & Culinary Management System</title>
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Supabase JS CDN (UMD 2.45.4) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              cream: '#FAF7F2',
+              sand: '#F2ECE2',
+              border: '#EAE3D6',
+              pine: '#132B24',
+              pineDark: '#0D1E19',
+              terracotta: '#C84B20',
+              terracottaHover: '#B33E16',
+              terracottaTint: '#FDF1EB',
+              charcoal: '#3A4B43',
+              sage: '#7D8D85'
+            }
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif']
+          },
+          borderRadius: {
+            '2xl': '1rem',
+            '3xl': '1.5rem',
+            '4xl': '2rem'
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    body {
+      background-color: #FAF7F2;
+      color: #132B24;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #FAF7F2;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #EAE3D6;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #C84B20;
+    }
+    /* Print thermal receipt styling */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #printable-receipt, #printable-receipt * {
+        visibility: visible;
+      }
+      #printable-receipt {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 80mm;
+        margin: 0;
+        padding: 8px;
+        color: #000;
+        background: #fff;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-[#C84B20] selection:text-white">
+
+  <!-- ==================== BANNER RUNTIME NOTIFICATION ==================== -->
+  <div id="runtime-banner" class="hidden bg-[#132B24] text-amber-200 text-xs py-1.5 px-4 text-center font-medium flex items-center justify-center gap-2 border-b border-amber-900/40">
+    <span class="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+    <span id="runtime-banner-text">Mode Demo Lokal (Supabase belum terkonfigurasi. Menggunakan penyimpanan localStorage).</span>
+  </div>
+
+  <!-- ==================== TOAST NOTIFICATIONS ==================== -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+  <!-- ==================== 1. LOGIN VIEW (PRIVATE PORTAL) ==================== -->
+  <div id="login-view" class="min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white rounded-3xl p-8 border border-brand-border shadow-xl relative overflow-hidden">
+      <!-- Decorative Top Ember Bar -->
+      <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-brand-terracotta to-amber-500"></div>
+
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-terracottaTint text-brand-terracotta mb-3 shadow-inner">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
+          </svg>
+        </div>
+        <h1 class="text-2xl font-extrabold text-brand-pine tracking-tight">SOSIS NAGA POS</h1>
+        <p class="text-sm text-brand-sage mt-1">Pedas Membara, Nikmat Juara &bull; Sistem Kasir & Keuangan</p>
+      </div>
+
+      <form id="login-form" onsubmit="window.handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-brand-charcoal uppercase tracking-wider mb-1.5">Email Pengguna</label>
+          <div class="relative">
+            <input type="email" id="login-email" required placeholder="admin@demo.com" class="w-full px-4 py-3 rounded-xl border border-brand-border bg-[#FAF7F2] text-sm text-brand-pine focus:outline-none focus:ring-2 focus:ring-brand-terracotta focus:bg-white transition-all">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-brand-charcoal uppercase tracking-wider mb-1.5">Kata Sandi</label>
+          <div class="relative">
+            <input type="password" id="login-password" required placeholder="••••••••" class="w-full px-4 py-3 rounded-xl border border-brand-border bg-[#FAF7F2] text-sm text-brand-pine focus:outline-none focus:ring-2 focus:ring-brand-terracotta focus:bg-white transition-all">
+          </div>
+        </div>
+
+        <button type="submit" id="btn-login" class="w-full py-3.5 px-4 bg-brand-terracotta hover:bg-brand-terracottaHover text-white font-bold rounded-xl shadow-md transition-all duration-200 transform active:scale-95 flex items-center justify-center gap-2">
+          <span>Masuk ke Sistem</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </button>
+      </form>
+
+      <!-- Quick Demo Login Buttons for convenience -->
+      <div class="mt-6 pt-5 border-t border-brand-border">
+        <p class="text-xs text-center text-brand-sage font-medium mb-3">Akses Cepat Pengujian (Mode Demo):</p>
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" onclick="window.quickDemoLogin('admin')" class="py-2 px-3 bg-brand-sand hover:bg-brand-border text-brand-pine rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+            Demo Admin
+          </button>
+          <button type="button" onclick="window.quickDemoLogin('kasir')" class="py-2 px-3 bg-brand-sand hover:bg-brand-border text-brand-pine rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-amber-600"></span>
+            Demo Kasir
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 2. MAIN APPLICATION VIEW ==================== -->
+  <div id="main-view" class="hidden min-h-screen flex flex-col md:flex-row">
+    
+    <!-- DESKTOP / TABLET SIDEBAR (EMBER AESTHETICS) -->
+    <aside class="w-full md:w-64 bg-[#FAF7F2] border-r border-brand-border flex flex-col shrink-0">
+      <div class="p-5 flex flex-col h-full justify-between">
+        <div>
+          <!-- Brand Logo Header -->
+          <div class="flex items-center gap-3 mb-6 px-1">
+            <div class="w-10 h-10 rounded-xl bg-brand-terracotta text-white flex items-center justify-center font-black text-lg shadow-sm">
+              SN
+            </div>
+            <div>
+              <h2 class="text-base font-extrabold text-brand-pine leading-none tracking-tight">SOSIS NAGA</h2>
+              <span class="text-[11px] font-semibold text-brand-sage uppercase tracking-wider">POS & Financials</span>
+            </div>
+          </div>
+
+          <!-- User Profile Card (Alex Morgan Style - Dark Forest Pine) -->
+          <div class="bg-brand-pine text-white rounded-2xl p-4 mb-6 shadow-md relative overflow-hidden">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 rounded-full bg-[#1C3A32] border border-emerald-500/30 flex items-center justify-center text-amber-200 font-bold text-sm">
+                <span id="user-avatar-text">SN</span>
+              </div>
+              <div class="overflow-hidden">
+                <h4 id="user-display-name" class="font-bold text-sm truncate text-white leading-tight">Nama Pengguna</h4>
+                <p id="user-display-email" class="text-[11px] text-emerald-200/70 truncate">user@email.com</p>
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-emerald-800/60 text-[11px]">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950/60 text-emerald-300 font-semibold uppercase tracking-wider" id="user-display-role">ADMIN</span>
+              <span class="text-xs text-amber-300 font-bold" id="badge-mode-status">LIVE</span>
+            </div>
+          </div>
+
+          <!-- Main Navigation Links -->
+          <nav class="space-y-1 text-sm font-medium" id="sidebar-nav">
+            <!-- Dashboard (Admin only) -->
+            <button type="button" onclick="window.navigateTo('section-dashboard')" data-nav="section-dashboard" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-brand-charcoal hover:bg-white hover:text-brand-pine">
+              <span class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-brand-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                Dashboard
+              </span>
+            </button>
+
+            <!-- Transaksi POS (Admin & Kasir) -->
+            <button type="button" onclick="window.navigateTo('section-pos')" data-nav="section-pos" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-brand-charcoal hover:bg-white hover:text-brand-pine">
+              <span class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-brand-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                Kasir & POS
+              </span>
+              <span id="badge-cart-count" class="hidden px-2 py-0.5 rounded-full bg-brand-terracotta text-white text-[11px] font-bold">0</span>
+            </button>
+
+            <!-- Riwayat Transaksi (Admin & Kasir) -->
+            <button type="button" onclick="window.navigateTo('section-transaksi')" data-nav="section-transaksi" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-brand-charcoal hover:bg-white hover:text-brand-pine">
+              <span class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-brand-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                Riwayat Transaksi
+              </span>
+            </button>
+
+            <!-- Produk (Admin only) -->
+            <button type="button" onclick="window.navigateTo('section-produk')" data-nav="section-produk" class="nav-item admin-only w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-brand-charcoal hover:bg-white hover:text-brand-pine">
+              <span class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-brand-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                Katalog Produk
+              </span>
+            </button>
+
+            <!-- Stok (Admin only) -->
+            <button type="button" onclick="window.navigateTo('section-stok')" data-nav="section-stok" class="nav-item admin-only w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-brand-charcoal hover:bg-white hover:text-brand-pine">
+              <span class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-brand-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                Kelola Stok
+              </span>
+              <span id="badge-low-stock" class="hidden px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[11px] font-bold">0</span>
+            </button>
+
+            <!-- Keuangan & Laba Rugi (Admin only) -->
+            <button type="button" onclick="window.navigateTo('section-keuangan')" data-nav="section-keuangan" class="nav-item admin-only w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-brand-charcoal hover:bg-white hover:text-brand-pine">
+              <span class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-brand-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Keuangan & Laba
+              </span>
+            </button>
+
+            <!-- Pajak (Admin only) -->
+            <button type="button" onclick="window.navigateTo('section-pajak')" data-nav="section-pajak" class="nav-item admin-only w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-brand-charcoal hover:bg-white hover:text-brand-pine">
+              <span class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-brand-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"/></svg>
+                Pajak Usaha
+              </span>
+            </button>
+
+            <!-- Buku Besar & Jurnal (Admin only) -->
+            <button type="button" onclick="window.navigateTo('section-buku-besar')" data-nav="section-buku-besar" class="nav-item admin-only w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-brand-charcoal hover:bg-white hover:text-brand-pine">
+              <span class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-brand-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                Buku Besar
+              </span>
+            </button>
+
+            <!-- Laporan (Admin only) -->
+            <button type="button" onclick="window.navigateTo('section-laporan')" data-nav="section-laporan" class="nav-item admin-only w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-brand-charcoal hover:bg-white hover:text-brand-pine">
+              <span class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-brand-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Laporan Lengkap
+              </span>
+            </button>
+
+            <!-- Manajemen Pengguna (Admin only) -->
+            <button type="button" onclick="window.navigateTo('section-users')" data-nav="section-users" class="nav-item admin-only w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-brand-charcoal hover:bg-white hover:text-brand-pine">
+              <span class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-brand-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                Manajemen Kasir
+              </span>
+            </button>
+          </nav>
+        </div>
+
+        <!-- Logout Bottom Action -->
+        <div class="pt-4 border-t border-brand-border">
+          <button type="button" onclick="window.handleLogout()" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Keluar Aplikasi
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN WORKSPACE & CONTENT AREA -->
+    <main class="flex-1 flex flex-col overflow-y-auto">
+      
+      <!-- Top Header Bar -->
+      <header class="h-16 border-b border-brand-border bg-white px-6 flex items-center justify-between shrink-0 sticky top-0 z-20 shadow-xs">
+        <div class="flex items-center gap-3">
+          <h1 id="current-page-title" class="text-lg font-bold text-brand-pine">Dashboard</h1>
+          <span id="current-date-display" class="hidden sm:inline-block text-xs text-brand-sage font-medium px-2.5 py-1 bg-brand-cream rounded-full border border-brand-border">Selasa, 3 Nov 2026</span>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <!-- Live Cart Quick Button (Opens POS cart or navigates) -->
+          <button type="button" onclick="window.navigateTo('section-pos')" class="relative flex items-center gap-2 py-1.5 px-3 rounded-full bg-brand-cream hover:bg-brand-sand border border-brand-border text-brand-pine text-xs font-bold transition">
+            <svg class="w-4 h-4 text-brand-terracotta" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+            <span class="hidden sm:inline">Keranjang</span>
+            <span id="header-cart-badge" class="w-5 h-5 rounded-full bg-brand-terracotta text-white flex items-center justify-center text-[10px]">0</span>
+          </button>
+
+          <!-- Quick Action Button -->
+          <button type="button" onclick="window.navigateTo('section-pos')" class="py-1.5 px-4 rounded-full bg-brand-terracotta hover:bg-brand-terracottaHover text-white text-xs font-bold shadow-sm transition">
+            + Pesanan Baru
+          </button>
+        </div>
+      </header>
+
+      <!-- SECTIONS CONTAINER -->
+      <div class="p-6 flex-1 space-y-6">
+
+        <!-- ==================== A. SECTION DASHBOARD ==================== -->
+        <section id="section-dashboard" class="space-y-6">
+          <!-- Top Greeting & Date Banner (Ember Style) -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-2xl font-extrabold text-brand-pine tracking-tight" id="dashboard-greeting">Selamat Pagi, Kasir!</h2>
+              <p class="text-sm text-brand-sage mt-0.5">Pantauan ringkasan performa penjualan, laba kotor, dan ketersediaan stok Sosis Naga hari ini.</p>
+            </div>
+          </div>
+
+          <!-- 4 Stat Cards Grid (Ember Rounded Cards) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Card 1: Penjualan Hari Ini -->
+            <div class="bg-white rounded-3xl p-5 border border-brand-border shadow-xs hover:shadow-md transition">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold text-brand-sage uppercase tracking-wider">Penjualan Hari Ini</span>
+                <span class="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                  Rp
+                </span>
+              </div>
+              <div class="text-2xl font-extrabold text-brand-pine" id="stat-omset-today">Rp 0</div>
+              <p class="text-xs text-brand-sage mt-1 font-medium" id="stat-omset-count">0 transaksi berhasil</p>
+            </div>
+
+            <!-- Card 2: Laba Kotor Hari Ini -->
+            <div class="bg-white rounded-3xl p-5 border border-brand-border shadow-xs hover:shadow-md transition">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold text-brand-sage uppercase tracking-wider">Laba Kotor (Hari Ini)</span>
+                <span class="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                </span>
+              </div>
+              <div class="text-2xl font-extrabold text-emerald-700" id="stat-profit-today">Rp 0</div>
+              <p class="text-xs text-brand-sage mt-1 font-medium">Omset dikurangi HPP</p>
+            </div>
+
+            <!-- Card 3: Total Transaksi Bulan Ini -->
+            <div class="bg-white rounded-3xl p-5 border border-brand-border shadow-xs hover:shadow-md transition">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold text-brand-sage uppercase tracking-wider">Total Penjualan Bulan Ini</span>
+                <span class="w-9 h-9 rounded-2xl bg-orange-50 text-brand-terracotta flex items-center justify-center font-bold">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                </span>
+              </div>
+              <div class="text-2xl font-extrabold text-brand-pine" id="stat-omset-month">Rp 0</div>
+              <p class="text-xs text-brand-sage mt-1 font-medium" id="stat-month-count">0 transaksi total</p>
+            </div>
+
+            <!-- Card 4: Peringatan Stok Menipis -->
+            <div class="bg-white rounded-3xl p-5 border border-brand-border shadow-xs hover:shadow-md transition">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold text-brand-sage uppercase tracking-wider">Stok Menipis</span>
+                <span class="w-9 h-9 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center font-bold">
+                  !
+                </span>
+              </div>
+              <div class="text-2xl font-extrabold text-red-600" id="stat-low-stock-count">0</div>
+              <p class="text-xs text-brand-sage mt-1 font-medium">Perlu restock sosis segera</p>
+            </div>
+          </div>
+
+          <!-- Ember Order Tracker / Active Station Status Bar -->
+          <div class="bg-white rounded-3xl p-6 border border-brand-border shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-4">
+              <div class="w-14 h-14 rounded-2xl bg-brand-terracottaTint border border-brand-terracotta/20 flex items-center justify-center text-brand-terracotta shrink-0">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              </div>
+              <div>
+                <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold uppercase tracking-wider">POS STATION ONLINE</span>
+                <h3 class="text-base font-bold text-brand-pine mt-1">Sistem Siap Melayani Transaksi Pelanggan</h3>
+                <p class="text-xs text-brand-sage">Semua kalkulasi HPP, stok otomatis, dan jurnal double-entry aktif otomatis.</p>
+              </div>
+            </div>
+
+            <!-- Process Stepper (Confirmed -> Cooking -> On the way -> Delivered inspired) -->
+            <div class="flex items-center gap-2 sm:gap-4 w-full md:w-auto justify-center">
+              <div class="flex items-center gap-1.5 text-xs font-bold text-brand-pine">
+                <span class="w-6 h-6 rounded-full bg-brand-pine text-white flex items-center justify-center text-[11px]">✓</span>
+                <span>Pilih Produk</span>
+              </div>
+              <span class="w-6 h-0.5 bg-brand-border"></span>
+              <div class="flex items-center gap-1.5 text-xs font-bold text-brand-pine">
+                <span class="w-6 h-6 rounded-full bg-brand-pine text-white flex items-center justify-center text-[11px]">✓</span>
+                <span>Bayar & Struk</span>
+              </div>
+              <span class="w-6 h-0.5 bg-brand-border"></span>
+              <div class="flex items-center gap-1.5 text-xs font-bold text-brand-terracotta">
+                <span class="w-6 h-6 rounded-full bg-brand-terracotta text-white flex items-center justify-center text-[11px]">3</span>
+                <span>Auto Jurnal</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bento Grid: Chart Penjualan + Produk Terlaris -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Sales Chart (2 cols) -->
+            <div class="lg:col-span-2 bg-white rounded-3xl p-6 border border-brand-border shadow-xs">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h3 class="text-base font-bold text-brand-pine">Tren Penjualan 7 Hari Terakhir</h3>
+                  <p class="text-xs text-brand-sage">Total omset pendapatan harian</p>
+                </div>
+              </div>
+              <div class="h-64 relative">
+                <canvas id="salesChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Produk Terlaris / Stok Menipis Alert List (1 col) -->
+            <div class="bg-white rounded-3xl p-6 border border-brand-border shadow-xs flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-base font-bold text-brand-pine">Peringatan Stok Sosis</h3>
+                  <button type="button" onclick="window.navigateTo('section-stok')" class="text-xs text-brand-terracotta font-bold hover:underline">Kelola Stok &rarr;</button>
+                </div>
+                <div id="dashboard-low-stock-list" class="space-y-3">
+                  <!-- Rendered dynamically -->
+                  <p class="text-xs text-brand-sage text-center py-6">Semua stok aman</p>
+                </div>
+              </div>
+
+              <!-- Bottom Loyalty Promo Banner (Terracotta style) -->
+              <div class="mt-6 p-4 rounded-2xl bg-brand-terracotta text-white flex items-center justify-between">
+                <div>
+                  <h4 class="font-bold text-xs">Pencatatan Keuangan Lengkap</h4>
+                  <p class="text-[11px] text-orange-100">Buku besar & laba rugi otomatis.</p>
+                </div>
+                <button type="button" onclick="window.navigateTo('section-keuangan')" class="py-1 px-3 bg-brand-pine text-white text-xs font-bold rounded-xl hover:bg-black transition">
+                  Lihat
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Riwayat Transaksi Terkini -->
+          <div class="bg-white rounded-3xl p-6 border border-brand-border shadow-xs">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-base font-bold text-brand-pine">Transaksi Penjualan Terakhir</h3>
+                <p class="text-xs text-brand-sage">Data transaksi kasir terbaru</p>
+              </div>
+              <button type="button" onclick="window.navigateTo('section-transaksi')" class="text-xs text-brand-terracotta font-bold hover:underline">Semua Transaksi &rarr;</button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead>
+                  <tr class="border-b border-brand-border text-xs text-brand-sage uppercase font-bold">
+                    <th class="py-3 px-3">No. Nota</th>
+                    <th class="py-3 px-3">Waktu</th>
+                    <th class="py-3 px-3">Kasir</th>
+                    <th class="py-3 px-3 text-right">Total Transaksi</th>
+                    <th class="py-3 px-3 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboard-recent-trx" class="divide-y divide-brand-border/60">
+                  <tr><td colspan="5" class="py-6 text-center text-xs text-brand-sage">Belum ada transaksi</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== B. SECTION POS (KASIR & PENJUALAN) ==================== -->
+        <section id="section-pos" class="hidden space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- LEFT AREA: Product Catalogue & Filter (8 Cols) -->
+            <div class="lg:col-span-8 space-y-5">
+              
+              <!-- Search & Category Filters -->
+              <div class="bg-white rounded-3xl p-4 border border-brand-border shadow-xs space-y-3">
+                <div class="flex items-center gap-3">
+                  <div class="relative flex-1">
+                    <input type="text" id="pos-search-input" oninput="window.onPosSearch(this.value)" placeholder="Cari nama sosis atau ID produk..." class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-brand-border bg-[#FAF7F2] text-sm text-brand-pine focus:outline-none focus:ring-2 focus:ring-brand-terracotta focus:bg-white">
+                    <svg class="w-5 h-5 text-brand-sage absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                  </div>
+                </div>
+
+                <!-- Category Pills -->
+                <div class="flex items-center gap-2 overflow-x-auto pb-1" id="pos-category-container">
+                  <button type="button" onclick="window.filterPosCategory('semua')" class="pos-cat-btn active px-3.5 py-1.5 rounded-full text-xs font-bold bg-brand-pine text-white transition shrink-0" data-cat="semua">Semua Menu</button>
+                  <button type="button" onclick="window.filterPosCategory('Sosis Bakar')" class="pos-cat-btn px-3.5 py-1.5 rounded-full text-xs font-bold bg-brand-sand text-brand-charcoal hover:bg-brand-border transition shrink-0" data-cat="Sosis Bakar">Sosis Bakar</button>
+                  <button type="button" onclick="window.filterPosCategory('Spesial Keju')" class="pos-cat-btn px-3.5 py-1.5 rounded-full text-xs font-bold bg-brand-sand text-brand-charcoal hover:bg-brand-border transition shrink-0" data-cat="Spesial Keju">Spesial Keju</button>
+                  <button type="button" onclick="window.filterPosCategory('Paket Hemat')" class="pos-cat-btn px-3.5 py-1.5 rounded-full text-xs font-bold bg-brand-sand text-brand-charcoal hover:bg-brand-border transition shrink-0" data-cat="Paket Hemat">Paket Hemat</button>
+                  <button type="button" onclick="window.filterPosCategory('Minuman')" class="pos-cat-btn px-3.5 py-1.5 rounded-full text-xs font-bold bg-brand-sand text-brand-charcoal hover:bg-brand-border transition shrink-0" data-cat="Minuman">Minuman & Snack</button>
+                </div>
+              </div>
+
+              <!-- Product Cards Grid -->
+              <div id="pos-product-grid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+                <!-- Dynamically rendered -->
+              </div>
+            </div>
+
+            <!-- RIGHT AREA: Active Cart & Checkout Station (4 Cols) -->
+            <div class="lg:col-span-4">
+              <div class="bg-white rounded-3xl p-5 border border-brand-border shadow-md sticky top-20 flex flex-col h-[calc(100vh-6.5rem)]">
+                
+                <div class="flex items-center justify-between pb-3 border-b border-brand-border">
+                  <div class="flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-xl bg-brand-terracottaTint text-brand-terracotta flex items-center justify-center font-bold">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                    </span>
+                    <h3 class="font-extrabold text-base text-brand-pine">Keranjang Pesanan</h3>
+                  </div>
+                  <button type="button" onclick="window.clearCart()" class="text-xs text-red-600 font-bold hover:underline">Kosongkan</button>
+                </div>
+
+                <!-- Cart Items Scrollable List -->
+                <div id="pos-cart-items" class="flex-1 overflow-y-auto py-3 space-y-2.5 divide-y divide-brand-border/50">
+                  <div class="text-center py-12 text-brand-sage text-xs">
+                    <svg class="w-12 h-12 mx-auto text-brand-border mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    Keranjang masih kosong.<br>Pilih produk di sebelah kiri.
+                  </div>
+                </div>
+
+                <!-- Payment Calculation Section -->
+                <div class="pt-3 border-t border-brand-border space-y-2.5">
+                  <div class="flex justify-between text-xs text-brand-charcoal">
+                    <span>Subtotal</span>
+                    <span class="font-bold" id="cart-subtotal">Rp 0</span>
+                  </div>
+
+                  <!-- Tax Toggle (Opsional PB1 Restoran 10%) -->
+                  <div class="flex items-center justify-between text-xs text-brand-charcoal">
+                    <label class="flex items-center gap-1.5 cursor-pointer">
+                      <input type="checkbox" id="cart-tax-toggle" onchange="window.recalcCartTotals()" class="rounded text-brand-terracotta focus:ring-0">
+                      <span>Pajak Restoran PB1 (10%)</span>
+                    </label>
+                    <span class="font-semibold" id="cart-tax-amount">Rp 0</span>
+                  </div>
+
+                  <div class="flex justify-between text-base font-extrabold text-brand-pine pt-1 border-t border-dashed border-brand-border">
+                    <span>Total Bayar</span>
+                    <span class="text-brand-terracotta text-lg" id="cart-grand-total">Rp 0</span>
+                  </div>
+
+                  <!-- Quick Cash Buttons -->
+                  <div class="grid grid-cols-4 gap-1.5 pt-1">
+                    <button type="button" onclick="window.setQuickPayment('exact')" class="py-1 px-1 rounded-lg bg-brand-sand hover:bg-brand-border text-[11px] font-bold text-brand-pine">Pas</button>
+                    <button type="button" onclick="window.setQuickPayment(20000)" class="py-1 px-1 rounded-lg bg-brand-sand hover:bg-brand-border text-[11px] font-bold text-brand-pine">20K</button>
+                    <button type="button" onclick="window.setQuickPayment(50000)" class="py-1 px-1 rounded-lg bg-brand-sand hover:bg-brand-border text-[11px] font-bold text-brand-pine">50K</button>
+                    <button type="button" onclick="window.setQuickPayment(100000)" class="py-1 px-1 rounded-lg bg-brand-sand hover:bg-brand-border text-[11px] font-bold text-brand-pine">100K</button>
+                  </div>
+
+                  <!-- Cash Input & Change -->
+                  <div>
+                    <label class="block text-[11px] font-bold text-brand-sage uppercase">Uang Diterima (Rp)</label>
+                    <input type="number" id="cart-payment-input" oninput="window.calcChange()" placeholder="0" class="w-full px-3 py-2 text-base font-extrabold text-brand-pine rounded-xl border border-brand-border bg-[#FAF7F2] focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-terracotta">
+                  </div>
+
+                  <div class="flex justify-between items-center text-xs p-2.5 rounded-xl bg-brand-sand font-bold">
+                    <span>Kembalian:</span>
+                    <span class="text-emerald-700 text-sm font-extrabold" id="cart-change-display">Rp 0</span>
+                  </div>
+
+                  <!-- Process Button -->
+                  <button type="button" id="btn-process-sale" onclick="window.processCheckout()" class="w-full py-3 rounded-2xl bg-brand-terracotta hover:bg-brand-terracottaHover text-white font-extrabold text-sm shadow-md transition transform active:scale-95 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    <span>Simpan & Cetak Struk</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ==================== C. SECTION PRODUK (ADMIN) ==================== -->
+        <section id="section-produk" class="hidden space-y-6">
+          <div class="bg-white rounded-3xl p-6 border border-brand-border shadow-xs">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="text-lg font-extrabold text-brand-pine">Katalog Produk Sosis Naga</h3>
+                <p class="text-xs text-brand-sage">Kelola harga modal (HPP), harga jual, batas stok minimum, dan status aktif produk.</p>
+              </div>
+              <button type="button" onclick="window.openProductModal()" class="py-2.5 px-4 bg-brand-terracotta hover:bg-brand-terracottaHover text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span>Tambah Produk</span>
+              </button>
+            </div>
+
+            <!-- Table of Products -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead>
+                  <tr class="border-b border-brand-border text-xs text-brand-sage uppercase font-bold">
+                    <th class="py-3 px-3">Kode</th>
+                    <th class="py-3 px-3">Nama Produk</th>
+                    <th class="py-3 px-3">Kategori</th>
+                    <th class="py-3 px-3 text-right">Harga Modal (HPP)</th>
+                    <th class="py-3 px-3 text-right">Harga Jual</th>
+                    <th class="py-3 px-3 text-right">Margin Laba</th>
+                    <th class="py-3 px-3 text-center">Stok / Min</th>
+                    <th class="py-3 px-3 text-center">Status</th>
+                    <th class="py-3 px-3 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="table-produk-body" class="divide-y divide-brand-border/60">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== D. SECTION STOK (ADMIN) ==================== -->
+        <section id="section-stok" class="hidden space-y-6">
+          
+          <!-- Summary Cards for Inventory -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-white rounded-3xl p-5 border border-brand-border shadow-xs">
+              <span class="text-xs font-bold text-brand-sage uppercase">Total Nilai Persediaan (HPP)</span>
+              <div class="text-2xl font-extrabold text-brand-pine mt-1" id="stok-total-value">Rp 0</div>
+              <p class="text-xs text-brand-sage mt-0.5">Nilai aset sosis di toko</p>
+            </div>
+            <div class="bg-white rounded-3xl p-5 border border-brand-border shadow-xs">
+              <span class="text-xs font-bold text-brand-sage uppercase">Total Varian Produk</span>
+              <div class="text-2xl font-extrabold text-brand-pine mt-1" id="stok-total-sku">0 SKU</div>
+              <p class="text-xs text-brand-sage mt-0.5">Produk aktif terdaftar</p>
+            </div>
+            <div class="bg-white rounded-3xl p-5 border border-brand-border shadow-xs">
+              <span class="text-xs font-bold text-brand-sage uppercase">Produk Menipis</span>
+              <div class="text-2xl font-extrabold text-red-600 mt-1" id="stok-alert-count">0 SKU</div>
+              <p class="text-xs text-brand-sage mt-0.5">Stok &le; batas minimum</p>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-3xl p-6 border border-brand-border shadow-xs">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="text-lg font-extrabold text-brand-pine">Manajemen Mutasi & Penyesuaian Stok</h3>
+                <p class="text-xs text-brand-sage">Pencatatan stok masuk dari supplier atau koreksi stok fisik opname.</p>
+              </div>
+              <button type="button" onclick="window.openStockModal()" class="py-2.5 px-4 bg-brand-pine hover:bg-black text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>Catat Stok Masuk / Koreksi</span>
+              </button>
+            </div>
+
+            <!-- Table of Stock Mutations -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead>
+                  <tr class="border-b border-brand-border text-xs text-brand-sage uppercase font-bold">
+                    <th class="py-3 px-3">Tanggal</th>
+                    <th class="py-3 px-3">Produk</th>
+                    <th class="py-3 px-3">Jenis</th>
+                    <th class="py-3 px-3 text-right">Perubahan Qty</th>
+                    <th class="py-3 px-3">Keterangan</th>
+                  </tr>
+                </thead>
+                <tbody id="table-stok-mutasi-body" class="divide-y divide-brand-border/60">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== E. SECTION RIWAYAT TRANSAKSI ==================== -->
+        <section id="section-transaksi" class="hidden space-y-6">
+          <div class="bg-white rounded-3xl p-6 border border-brand-border shadow-xs">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="text-lg font-extrabold text-brand-pine">Riwayat Transaksi Penjualan</h3>
+                <p class="text-xs text-brand-sage">Daftar nota transaksi kasir beserta rincian produk yang terjual.</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <input type="date" id="filter-trx-date" onchange="window.filterTransactions()" class="px-3 py-2 rounded-xl border border-brand-border text-xs text-brand-pine bg-[#FAF7F2]">
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead>
+                  <tr class="border-b border-brand-border text-xs text-brand-sage uppercase font-bold">
+                    <th class="py-3 px-3">Kode Nota</th>
+                    <th class="py-3 px-3">Tanggal & Waktu</th>
+                    <th class="py-3 px-3">Kasir</th>
+                    <th class="py-3 px-3 text-right">Total Transaksi</th>
+                    <th class="py-3 px-3 text-right">Uang Bayar</th>
+                    <th class="py-3 px-3 text-right">Kembalian</th>
+                    <th class="py-3 px-3 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="table-riwayat-trx-body" class="divide-y divide-brand-border/60">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== F. SECTION KEUANGAN & LABA RUGI ==================== -->
+        <section id="section-keuangan" class="hidden space-y-6">
+          <!-- Summary Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div class="bg-white rounded-3xl p-5 border border-brand-border shadow-xs">
+              <span class="text-xs font-bold text-brand-sage uppercase">Pendapatan Penjualan</span>
+              <div class="text-xl font-extrabold text-brand-pine mt-1" id="fin-pendapatan">Rp 0</div>
+            </div>
+            <div class="bg-white rounded-3xl p-5 border border-brand-border shadow-xs">
+              <span class="text-xs font-bold text-brand-sage uppercase">Total HPP (Modal Produk)</span>
+              <div class="text-xl font-extrabold text-brand-charcoal mt-1" id="fin-hpp">Rp 0</div>
+            </div>
+            <div class="bg-white rounded-3xl p-5 border border-brand-border shadow-xs">
+              <span class="text-xs font-bold text-emerald-700 uppercase">Laba Kotor</span>
+              <div class="text-xl font-extrabold text-emerald-700 mt-1" id="fin-laba-kotor">Rp 0</div>
+            </div>
+            <div class="bg-white rounded-3xl p-5 border border-brand-border shadow-xs">
+              <span class="text-xs font-bold text-red-600 uppercase">Biaya Operasional</span>
+              <div class="text-xl font-extrabold text-red-600 mt-1" id="fin-biaya">Rp 0</div>
+            </div>
+            <div class="bg-white rounded-3xl p-5 border border-brand-border shadow-xs">
+              <span class="text-xs font-bold text-brand-terracotta uppercase">Laba Bersih</span>
+              <div class="text-xl font-extrabold text-brand-terracotta mt-1" id="fin-laba-bersih">Rp 0</div>
+            </div>
+          </div>
+
+          <!-- Input Biaya Operasional & Daftar Biaya -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Form Tambah Biaya -->
+            <div class="bg-white rounded-3xl p-6 border border-brand-border shadow-xs">
+              <h3 class="text-base font-bold text-brand-pine mb-4">Catat Biaya Operasional</h3>
+              <form id="form-biaya" onsubmit="window.handleSaveBiaya(event)" class="space-y-3">
+                <div>
+                  <label class="block text-xs font-semibold text-brand-charcoal mb-1">Tanggal</label>
+                  <input type="date" id="biaya-tanggal" required class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-brand-charcoal mb-1">Kategori Biaya</label>
+                  <select id="biaya-kategori" class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm bg-white">
+                    <option value="Bahan Baku & Gas">Bahan Baku & Gas Elpiji</option>
+                    <option value="Kemasan & Kantong">Kemasan, Kotak & Kantong</option>
+                    <option value="Listrik & Air">Listrik, Air & Wi-Fi</option>
+                    <option value="Gaji & Uang Makan">Gaji Kasir & Uang Makan</option>
+                    <option value="Sewa Tempat / Booth">Sewa Tempat / Booth</option>
+                    <option value="Lain-lain">Biaya Operasional Lainnya</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-brand-charcoal mb-1">Keterangan Pengeluaran</label>
+                  <input type="text" id="biaya-keterangan" required placeholder="Contoh: Beli gas 3kg dan saus sambal" class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-brand-charcoal mb-1">Jumlah Biaya (Rp)</label>
+                  <input type="number" id="biaya-jumlah" required min="1000" placeholder="50000" class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm font-bold">
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-brand-pine text-white text-xs font-bold rounded-xl hover:bg-black transition">
+                  + Simpan Pengeluaran
+                </button>
+              </form>
+            </div>
+
+            <!-- Tabel Riwayat Biaya -->
+            <div class="lg:col-span-2 bg-white rounded-3xl p-6 border border-brand-border shadow-xs">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-bold text-brand-pine">Rincian Beban Operasional</h3>
+              </div>
+              <div class="overflow-x-auto max-h-96">
+                <table class="w-full text-left text-sm">
+                  <thead>
+                    <tr class="border-b border-brand-border text-xs text-brand-sage uppercase font-bold">
+                      <th class="py-2.5 px-3">Tanggal</th>
+                      <th class="py-2.5 px-3">Kategori</th>
+                      <th class="py-2.5 px-3">Keterangan</th>
+                      <th class="py-2.5 px-3 text-right">Jumlah</th>
+                      <th class="py-2.5 px-3 text-center">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="table-biaya-body" class="divide-y divide-brand-border/60">
+                    <!-- Rendered dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== G. SECTION PAJAK ==================== -->
+        <section id="section-pajak" class="hidden space-y-6">
+          <div class="bg-white rounded-3xl p-6 border border-brand-border shadow-xs">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="text-lg font-extrabold text-brand-pine">Kalkulator & Laporan Pajak Usaha</h3>
+                <p class="text-xs text-brand-sage">Perhitungan Pajak PB1 Restoran (10%) atau PPh Final UMKM PP 55/2022 (0.5%).</p>
+              </div>
+              <button type="button" onclick="window.openPajakModal()" class="py-2.5 px-4 bg-brand-terracotta hover:bg-brand-terracottaHover text-white font-bold text-xs rounded-xl shadow-sm transition">
+                + Catat Pembayaran Pajak
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead>
+                  <tr class="border-b border-brand-border text-xs text-brand-sage uppercase font-bold">
+                    <th class="py-3 px-3">Periode</th>
+                    <th class="py-3 px-3">Jenis Pajak</th>
+                    <th class="py-3 px-3 text-right">Tarif</th>
+                    <th class="py-3 px-3 text-right">Dasar Pengenaan (Omset)</th>
+                    <th class="py-3 px-3 text-right">Nilai Pajak</th>
+                    <th class="py-3 px-3">Keterangan</th>
+                    <th class="py-3 px-3 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="table-pajak-body" class="divide-y divide-brand-border/60">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== H. SECTION BUKU BESAR ==================== -->
+        <section id="section-buku-besar" class="hidden space-y-6">
+          <div class="bg-white rounded-3xl p-6 border border-brand-border shadow-xs">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="text-lg font-extrabold text-brand-pine">Buku Besar & Jurnal Double-Entry</h3>
+                <p class="text-xs text-brand-sage">Pencatatan akuntansi otomatis untuk setiap transaksi kasir, HPP, beban, dan modal.</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <select id="filter-buku-akun" onchange="window.filterBukuBesar()" class="px-3 py-2 rounded-xl border border-brand-border text-xs text-brand-pine bg-[#FAF7F2]">
+                  <option value="">Semua Akun</option>
+                  <!-- Dynamically populated -->
+                </select>
+                <button type="button" onclick="window.openJurnalModal()" class="py-2 px-3 bg-brand-pine text-white text-xs font-bold rounded-xl hover:bg-black transition">
+                  + Jurnal Manual
+                </button>
+              </div>
+            </div>
+
+            <!-- Ledger Summary -->
+            <div class="grid grid-cols-3 gap-4 mb-6 p-4 rounded-2xl bg-brand-cream border border-brand-border text-center">
+              <div>
+                <span class="text-xs text-brand-sage font-bold uppercase">Total Debit</span>
+                <p class="text-lg font-extrabold text-brand-pine" id="bb-total-debit">Rp 0</p>
+              </div>
+              <div>
+                <span class="text-xs text-brand-sage font-bold uppercase">Total Kredit</span>
+                <p class="text-lg font-extrabold text-brand-pine" id="bb-total-kredit">Rp 0</p>
+              </div>
+              <div>
+                <span class="text-xs text-brand-sage font-bold uppercase">Status Neraca</span>
+                <p class="text-lg font-extrabold text-emerald-700" id="bb-status-balance">SEIMBANG (Rp 0)</p>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead>
+                  <tr class="border-b border-brand-border text-xs text-brand-sage uppercase font-bold">
+                    <th class="py-3 px-3">No. Jurnal</th>
+                    <th class="py-3 px-3">Tanggal</th>
+                    <th class="py-3 px-3">Kode Akun</th>
+                    <th class="py-3 px-3">Nama Akun</th>
+                    <th class="py-3 px-3">Keterangan</th>
+                    <th class="py-3 px-3 text-right">Debit</th>
+                    <th class="py-3 px-3 text-right">Kredit</th>
+                  </tr>
+                </thead>
+                <tbody id="table-buku-besar-body" class="divide-y divide-brand-border/60">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== I. SECTION LAPORAN ==================== -->
+        <section id="section-laporan" class="hidden space-y-6">
+          <div class="bg-white rounded-3xl p-6 border border-brand-border shadow-xs">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="text-lg font-extrabold text-brand-pine">Pusat Laporan & Ekspor Data</h3>
+                <p class="text-xs text-brand-sage">Ringkasan berkala performa POS Sosis Naga siap cetak dan ekspor CSV.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="window.printReport()" class="py-2 px-3 bg-brand-sand hover:bg-brand-border text-brand-pine font-bold text-xs rounded-xl transition">
+                  Cetak Dokumen
+                </button>
+                <button type="button" onclick="window.exportToCsv()" class="py-2 px-3 bg-brand-terracotta hover:bg-brand-terracottaHover text-white font-bold text-xs rounded-xl transition">
+                  Ekspor CSV
+                </button>
+              </div>
+            </div>
+
+            <!-- Report Cards Selector -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="report-summary-view">
+              <div class="p-5 rounded-2xl border border-brand-border bg-[#FAF7F2]">
+                <h4 class="font-extrabold text-sm text-brand-pine">Laporan Penjualan & Produk</h4>
+                <p class="text-xs text-brand-sage mt-1">Data penjualan harian dan ranking menu sosis terlaris.</p>
+              </div>
+              <div class="p-5 rounded-2xl border border-brand-border bg-[#FAF7F2]">
+                <h4 class="font-extrabold text-sm text-brand-pine">Laporan Laba Rugi Komprehensif</h4>
+                <p class="text-xs text-brand-sage mt-1">Kalkulasi omset, HPP riil, biaya operasional, dan laba bersih.</p>
+              </div>
+              <div class="p-5 rounded-2xl border border-brand-border bg-[#FAF7F2]">
+                <h4 class="font-extrabold text-sm text-brand-pine">Laporan Posisi Persediaan</h4>
+                <p class="text-xs text-brand-sage mt-1">Status stok sosis sisa, mutasi masuk, dan valuasi aset.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== J. SECTION USER MANAGEMENT ==================== -->
+        <section id="section-users" class="hidden space-y-6">
+          <div class="bg-white rounded-3xl p-6 border border-brand-border shadow-xs">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="text-lg font-extrabold text-brand-pine">Manajemen Akun Kasir & Admin</h3>
+                <p class="text-xs text-brand-sage">Kelola hak akses pengguna POS via Vercel Admin Gateway.</p>
+              </div>
+              <button type="button" onclick="window.openUserModal()" class="py-2.5 px-4 bg-brand-terracotta hover:bg-brand-terracottaHover text-white font-bold text-xs rounded-xl shadow-sm transition">
+                + Tambah Pengguna Baru
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead>
+                  <tr class="border-b border-brand-border text-xs text-brand-sage uppercase font-bold">
+                    <th class="py-3 px-3">Nama Lengkap</th>
+                    <th class="py-3 px-3">Email Pengguna</th>
+                    <th class="py-3 px-3 text-center">Peran (Role)</th>
+                    <th class="py-3 px-3 text-center">Status</th>
+                    <th class="py-3 px-3 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="table-users-body" class="divide-y divide-brand-border/60">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. MODAL STRUK PENJUALAN (THERMAL PRINT) -->
+  <div id="modal-receipt" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 border border-brand-border shadow-2xl relative">
+      <div id="printable-receipt" class="text-brand-pine text-xs font-mono space-y-3">
+        <div class="text-center pb-2 border-b border-dashed border-gray-400">
+          <h2 class="text-base font-extrabold tracking-wider">SOSIS NAGA</h2>
+          <p class="text-[11px] text-gray-600">Pedas Membara, Nikmat Juara</p>
+          <p class="text-[10px] text-gray-500">Jl. Naga Rasa No. 88, Kota Kuliner</p>
+        </div>
+
+        <div class="flex justify-between text-[11px] text-gray-600">
+          <span id="rcpt-kode">TRX-0000</span>
+          <span id="rcpt-waktu">03/11/2026 12:00</span>
+        </div>
+        <div class="text-[11px] text-gray-600">
+          Kasir: <span id="rcpt-kasir" class="font-bold">Kasir 1</span>
+        </div>
+
+        <!-- Items Table -->
+        <div class="py-2 border-y border-dashed border-gray-400 space-y-1.5" id="rcpt-items-list">
+          <!-- Rendered -->
+        </div>
+
+        <div class="space-y-1 text-[11px] pt-1">
+          <div class="flex justify-between">
+            <span>Subtotal:</span>
+            <span id="rcpt-subtotal" class="font-bold">Rp 0</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Pajak Restoran:</span>
+            <span id="rcpt-pajak">Rp 0</span>
+          </div>
+          <div class="flex justify-between text-xs font-extrabold pt-1 border-t border-gray-300">
+            <span>TOTAL:</span>
+            <span id="rcpt-total">Rp 0</span>
+          </div>
+          <div class="flex justify-between text-gray-600">
+            <span>Bayar:</span>
+            <span id="rcpt-bayar">Rp 0</span>
+          </div>
+          <div class="flex justify-between text-gray-600">
+            <span>Kembalian:</span>
+            <span id="rcpt-kembalian">Rp 0</span>
+          </div>
+        </div>
+
+        <div class="text-center pt-3 border-t border-dashed border-gray-400 text-[10px] text-gray-500">
+          <p>Terima kasih atas kunjungan Anda!</p>
+          <p>Follow IG: @sosisnaga.official</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="mt-5 flex gap-2 no-print">
+        <button type="button" onclick="window.printReceipt()" class="flex-1 py-2.5 bg-brand-terracotta hover:bg-brand-terracottaHover text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+          Cetak Struk
+        </button>
+        <button type="button" onclick="window.closeReceiptModal()" class="py-2.5 px-4 bg-brand-sand text-brand-pine text-xs font-bold rounded-xl hover:bg-brand-border transition">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. MODAL PRODUK (TAMBAH / EDIT) -->
+  <div id="modal-product" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 border border-brand-border shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-brand-border mb-4">
+        <h3 class="font-extrabold text-base text-brand-pine" id="modal-product-title">Tambah Produk Baru</h3>
+        <button type="button" onclick="window.closeProductModal()" class="text-brand-sage hover:text-brand-pine">&times;</button>
+      </div>
+      <form id="form-product" onsubmit="window.handleSaveProduct(event)" class="space-y-3.5">
+        <input type="hidden" id="prod-id">
+        <div>
+          <label class="block text-xs font-semibold text-brand-charcoal mb-1">Kode Produk</label>
+          <input type="text" id="prod-kode" required placeholder="SN-008" class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-brand-charcoal mb-1">Nama Produk Sosis</label>
+          <input type="text" id="prod-nama" required placeholder="Sosis Naga Saus Mayo" class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-brand-charcoal mb-1">Kategori</label>
+          <select id="prod-kategori" class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm bg-white">
+            <option value="Sosis Bakar">Sosis Bakar</option>
+            <option value="Spesial Keju">Spesial Keju</option>
+            <option value="Paket Hemat">Paket Hemat</option>
+            <option value="Snack">Snack</option>
+            <option value="Minuman">Minuman</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-brand-charcoal mb-1">Harga Modal / HPP</label>
+            <input type="number" id="prod-hpp" required min="0" placeholder="8000" class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm font-bold">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-brand-charcoal mb-1">Harga Jual</label>
+            <input type="number" id="prod-harga" required min="0" placeholder="15000" class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm font-bold text-brand-terracotta">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-brand-charcoal mb-1">Stok Saat Ini</label>
+            <input type="number" id="prod-stok" required min="0" placeholder="50" class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm font-bold">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-brand-charcoal mb-1">Batas Stok Minimum</label>
+            <input type="number" id="prod-min-stok" required min="1" placeholder="10" class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm">
+          </div>
+        </div>
+        <div class="flex items-center gap-2 pt-1">
+          <input type="checkbox" id="prod-aktif" checked class="rounded text-brand-terracotta focus:ring-0">
+          <label for="prod-aktif" class="text-xs font-bold text-brand-charcoal">Status Aktif (Tampil di Kasir)</label>
+        </div>
+        <div class="pt-3 flex gap-2">
+          <button type="submit" class="flex-1 py-2.5 bg-brand-terracotta hover:bg-brand-terracottaHover text-white text-xs font-bold rounded-xl transition">
+            Simpan Produk
+          </button>
+          <button type="button" onclick="window.closeProductModal()" class="py-2.5 px-4 bg-brand-sand text-brand-pine text-xs font-bold rounded-xl hover:bg-brand-border transition">
+            Batal
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. MODAL STOK MASUK / PENYESUAIAN -->
+  <div id="modal-stock" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 border border-brand-border shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-brand-border mb-4">
+        <h3 class="font-extrabold text-base text-brand-pine">Mutasi / Penyesuaian Stok Sosis</h3>
+        <button type="button" onclick="window.closeStockModal()" class="text-brand-sage hover:text-brand-pine">&times;</button>
+      </div>
+      <form id="form-stock" onsubmit="window.handleSaveStockAdjustment(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-brand-charcoal mb-1">Pilih Produk Sosis</label>
+          <select id="adj-produk-id" required class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm bg-white">
+            <!-- Dynamically populated -->
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-brand-charcoal mb-1">Jenis Penyesuaian</label>
+          <select id="adj-jenis" class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm bg-white">
+            <option value="masuk">Stok Masuk (Tambah ke stok saat ini)</option>
+            <option value="penyesuaian">Penyesuaian Fisik (Ganti total stok baru)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-brand-charcoal mb-1">Jumlah (Qty)</label>
+          <input type="number" id="adj-qty" required min="1" placeholder="25" class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm font-bold">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-brand-charcoal mb-1">Keterangan Mutasi</label>
+          <input type="text" id="adj-keterangan" required placeholder="Contoh: Kiriman supplier frozen food" class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm">
+        </div>
+        <div class="pt-3 flex gap-2">
+          <button type="submit" class="flex-1 py-2.5 bg-brand-pine hover:bg-black text-white text-xs font-bold rounded-xl transition">
+            Simpan Mutasi Stok
+          </button>
+          <button type="button" onclick="window.closeStockModal()" class="py-2.5 px-4 bg-brand-sand text-brand-pine text-xs font-bold rounded-xl hover:bg-brand-border transition">
+            Batal
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. MODAL DETAIL TRANSAKSI RIWAYAT -->
+  <div id="modal-detail-trx" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 border border-brand-border shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-brand-border mb-4">
+        <div>
+          <h3 class="font-extrabold text-base text-brand-pine" id="detail-trx-title">Rincian Transaksi</h3>
+          <p class="text-xs text-brand-sage" id="detail-trx-meta">Waktu & Kasir</p>
+        </div>
+        <button type="button" onclick="window.closeDetailTrxModal()" class="text-brand-sage hover:text-brand-pine text-lg">&times;</button>
+      </div>
+
+      <div class="overflow-x-auto max-h-60 mb-4">
+        <table class="w-full text-left text-xs">
+          <thead>
+            <tr class="border-b border-brand-border text-brand-sage uppercase font-bold">
+              <th class="py-2">Item Produk</th>
+              <th class="py-2 text-right">Harga</th>
+              <th class="py-2 text-center">Qty</th>
+              <th class="py-2 text-right">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody id="detail-trx-items-body" class="divide-y divide-brand-border/40">
+            <!-- Rendered -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="p-3 bg-brand-cream rounded-2xl border border-brand-border space-y-1.5 text-xs">
+        <div class="flex justify-between font-bold">
+          <span>Total Transaksi:</span>
+          <span id="detail-trx-total" class="text-brand-terracotta text-sm">Rp 0</span>
+        </div>
+        <div class="flex justify-between text-brand-sage">
+          <span>Uang Diterima:</span>
+          <span id="detail-trx-bayar">Rp 0</span>
+        </div>
+        <div class="flex justify-between text-brand-sage">
+          <span>Kembalian:</span>
+          <span id="detail-trx-kembalian">Rp 0</span>
+        </div>
+      </div>
+
+      <div class="mt-4 flex gap-2">
+        <button type="button" id="btn-reprint-receipt" class="flex-1 py-2 bg-brand-terracotta text-white text-xs font-bold rounded-xl">
+          Cetak Ulang Struk
+        </button>
+        <button type="button" onclick="window.closeDetailTrxModal()" class="py-2 px-4 bg-brand-sand text-brand-pine text-xs font-bold rounded-xl">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. MODAL USER MANAGEMENT -->
+  <div id="modal-user" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 border border-brand-border shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-brand-border mb-4">
+        <h3 class="font-extrabold text-base text-brand-pine">Tambah Akun Kasir / Admin</h3>
+        <button type="button" onclick="window.closeUserModal()" class="text-brand-sage hover:text-brand-pine">&times;</button>
+      </div>
+      <form id="form-user" onsubmit="window.handleSaveUser(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-brand-charcoal mb-1">Nama Lengkap</label>
+          <input type="text" id="user-input-nama" required placeholder="Budi Santoso" class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-brand-charcoal mb-1">Email Login</label>
+          <input type="email" id="user-input-email" required placeholder="kasir1@sosisnaga.com" class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-brand-charcoal mb-1">Kata Sandi (Min 6 Karakter)</label>
+          <input type="password" id="user-input-password" required minlength="6" placeholder="••••••••" class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-brand-charcoal mb-1">Peran Akses</label>
+          <select id="user-input-role" class="w-full px-3 py-2 rounded-xl border border-brand-border text-sm bg-white">
+            <option value="kasir">Kasir (Hanya POS & Transaksi)</option>
+            <option value="admin">Admin (Akses Penuh Semua Modul)</option>
+          </select>
+        </div>
+        <div class="pt-3 flex gap-2">
+          <button type="submit" class="flex-1 py-2.5 bg-brand-terracotta hover:bg-brand-terracottaHover text-white text-xs font-bold rounded-xl transition">
+            Daftarkan Akun
+          </button>
+          <button type="button" onclick="window.closeUserModal()" class="py-2.5 px-4 bg-brand-sand text-brand-pine text-xs font-bold rounded-xl hover:bg-brand-border transition">
+            Batal
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== JAVASCRIPT APPLICATION CORE ==================== -->
+  <script>
+    /* ====== KONFIGURASI PUBLIK - diambil dari /api/config (Environment Variables Vercel) ====== */
+    var SUPABASE_URL = '';
+    var SUPABASE_ANON_KEY = '';
+    window.hasApi = false;
+    window.loadPublicConfig = async function () {
+      try {
+        var ctrl = new AbortController();
+        var timer = setTimeout(function () { ctrl.abort(); }, 4000);
+        var res = await fetch('/api/config', { cache: 'no-store', signal: ctrl.signal });
+        clearTimeout(timer);
+        var cfg = await res.json();
+        if (cfg && cfg.configured) {
+          SUPABASE_URL = cfg.url;
+          SUPABASE_ANON_KEY = cfg.anonKey;
+          window.hasApi = true;
+        }
+      } catch (e) {
+        console.warn('Konfigurasi tidak tersedia, masuk Mock Mode:', e);
+      }
+    };
+    /* ====== AKHIR KONFIGURASI ====== */
+
+    /* Safe Storage untuk menangani batasan iframe sandbox */
+    var safeStorage = (function () {
+      var mem = {};
+      try {
+        window.localStorage.setItem('__t', '1');
+        window.localStorage.removeItem('__t');
+        return window.localStorage;
+      } catch (e) {}
+      return {
+        getItem: function (k) { return mem[k] || null; },
+        setItem: function (k, v) { mem[k] = String(v); },
+        removeItem: function (k) { delete mem[k]; }
+      };
+    })();
+
+    /* Central Application State */
+    window.appState = {
+      accessMode: 'private',
+      mode: 'mock',
+      currentUser: null,
+      isAuth: false,
+      currentCategory: 'semua',
+      searchQuery: '',
+      cart: [],
+      data: {
+        produk: [],
+        transaksi: [],
+        detail_transaksi: [],
+        stok_mutasi: [],
+        biaya: [],
+        pajak: [],
+        akun: [],
+        buku_besar: [],
+        users: []
+      }
+    };
+
+    /* Role Permissions Table */
+    var ROLE_PERMISSIONS = {
+      admin: ['section-dashboard', 'section-pos', 'section-transaksi', 'section-produk', 'section-stok', 'section-keuangan', 'section-pajak', 'section-buku-besar', 'section-laporan', 'section-users'],
+      kasir: ['section-pos', 'section-transaksi']
+    };
+
+    /* Data Adapter (Mock & Live Supabase) */
+    window.DB = {
+      newId: function () {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+          return crypto.randomUUID();
+        }
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+          var r = Math.random() * 16 | 0;
+          var v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+      },
+      nextCode: function (prefix) {
+        var d = new Date();
+        var ymd = d.getFullYear() + ('0' + (d.getMonth() + 1)).slice(-2) + ('0' + d.getDate()).slice(-2);
+        var rand = Math.floor(1000 + Math.random() * 9000);
+        return prefix + '-' + ymd + '-' + rand;
+      }
+    };
+
+    /* Toast Helper */
+    window.showToast = function (message, type) {
+      var container = document.getElementById('toast-container');
+      if (!container) return;
+      var el = document.createElement('div');
+      var bg = type === 'error' ? 'bg-red-600' : (type === 'success' ? 'bg-brand-pine' : 'bg-brand-terracotta');
+      el.className = bg + ' text-white px-4 py-3 rounded-2xl shadow-lg text-xs font-bold flex items-center justify-between gap-3 pointer-events-auto transform transition-all duration-300 translate-y-2 opacity-0';
+      el.innerHTML = '<span>' + message + '</span><button onclick="this.parentElement.remove()" class="text-white/80 hover:text-white">&times;</button>';
+      container.appendChild(el);
+      setTimeout(function () {
+        el.classList.remove('translate-y-2', 'opacity-0');
+      }, 20);
+      setTimeout(function () {
+        el.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(function () { el.remove(); }, 300);
+      }, 4000);
+    };
+
+    /* Number Formatter (Rupiah) */
+    window.formatRupiah = function (num) {
+      var n = Number(num) || 0;
+      return 'Rp ' + n.toLocaleString('id-ID');
+    };
+
+    /* ==================== MOCK DATA SEEDER ==================== */
+    function initMockDatabase() {
+      var raw = safeStorage.getItem('sosis_naga_db_v1');
+      if (raw) {
+        try {
+          window.appState.data = JSON.parse(raw);
+          return;
+        } catch (e) {}
+      }
+
+      var defaultProducts = [
+        { id: window.DB.newId(), kode: 'SN-001', nama: 'Sosis Naga Jumbo Bakar Saus BBQ', kategori: 'Sosis Bakar', harga_modal: 8000, harga_jual: 15000, stok: 50, minimum_stok: 10, aktif: true },
+        { id: window.DB.newId(), kode: 'SN-002', nama: 'Sosis Naga Super Pedas Level 5', kategori: 'Sosis Bakar', harga_modal: 8500, harga_jual: 16000, stok: 45, minimum_stok: 10, aktif: true },
+        { id: window.DB.newId(), kode: 'SN-003', nama: 'Sosis Naga Keju Lumer Melted', kategori: 'Spesial Keju', harga_modal: 10000, harga_jual: 18000, stok: 40, minimum_stok: 10, aktif: true },
+        { id: window.DB.newId(), kode: 'SN-004', nama: 'Sosis Naga Blackpepper Lada Hitam', kategori: 'Sosis Bakar', harga_modal: 8500, harga_jual: 16000, stok: 35, minimum_stok: 10, aktif: true },
+        { id: window.DB.newId(), kode: 'SN-005', nama: 'Paket Hemat Duo Naga + Es Teh', kategori: 'Paket Hemat', harga_modal: 14000, harga_jual: 25000, stok: 30, minimum_stok: 8, aktif: true },
+        { id: window.DB.newId(), kode: 'SN-006', nama: 'Sosis Naga Mini Crispy (Isi 3)', kategori: 'Snack', harga_modal: 7000, harga_jual: 13000, stok: 4, minimum_stok: 10, aktif: true },
+        { id: window.DB.newId(), kode: 'SN-007', nama: 'Es Teh Lemon Sosis Naga', kategori: 'Minuman', harga_modal: 2000, harga_jual: 5000, stok: 80, minimum_stok: 15, aktif: true }
+      ];
+
+      var defaultAccounts = [
+        { id: window.DB.newId(), kode_akun: '1001', nama_akun: 'Kas Kasir & Operasional', jenis_akun: 'Aset', status: true },
+        { id: window.DB.newId(), kode_akun: '1002', nama_akun: 'Bank Rekening Operasional', jenis_akun: 'Aset', status: true },
+        { id: window.DB.newId(), kode_akun: '1101', nama_akun: 'Persediaan Produk Sosis Naga', jenis_akun: 'Aset', status: true },
+        { id: window.DB.newId(), kode_akun: '2001', nama_akun: 'Utang Usaha & Supplier', jenis_akun: 'Kewajiban', status: true },
+        { id: window.DB.newId(), kode_akun: '3001', nama_akun: 'Modal Pemilik', jenis_akun: 'Ekuitas', status: true },
+        { id: window.DB.newId(), kode_akun: '4001', nama_akun: 'Pendapatan Penjualan Sosis Naga', jenis_akun: 'Pendapatan', status: true },
+        { id: window.DB.newId(), kode_akun: '5001', nama_akun: 'Beban Pokok Penjualan (HPP)', jenis_akun: 'Beban', status: true },
+        { id: window.DB.newId(), kode_akun: '6001', nama_akun: 'Beban Gas, Saus & Operasional', jenis_akun: 'Beban', status: true },
+        { id: window.DB.newId(), kode_akun: '6002', nama_akun: 'Beban Gaji Kasir', jenis_akun: 'Beban', status: true },
+        { id: window.DB.newId(), kode_akun: '6003', nama_akun: 'Beban Pajak Usaha', jenis_akun: 'Beban', status: true }
+      ];
+
+      var defaultBiaya = [
+        { id: window.DB.newId(), tanggal: new Date().toISOString().split('T')[0], kategori: 'Bahan Baku & Gas', keterangan: 'Gas Elpiji 3kg & Saus BBQ', jumlah: 120000 }
+      ];
+
+      var defaultUsers = [
+        { id: 'usr-admin-1', email: 'admin@demo.com', nama: 'Administrator Sosis', role: 'admin', aktif: true },
+        { id: 'usr-kasir-1', email: 'kasir@demo.com', nama: 'Kasir Sosis Naga', role: 'kasir', aktif: true }
+      ];
+
+      window.appState.data = {
+        produk: defaultProducts,
+        transaksi: [],
+        detail_transaksi: [],
+        stok_mutasi: [],
+        biaya: defaultBiaya,
+        pajak: [],
+        akun: defaultAccounts,
+        buku_besar: [],
+        users: defaultUsers
+      };
+      saveMockDatabase();
+    }
+
+    function saveMockDatabase() {
+      try {
+        safeStorage.setItem('sosis_naga_db_v1', JSON.stringify(window.appState.data));
+      } catch (e) {}
+    }
+
+    /* ==================== NAVIGATION & GUARDS ==================== */
+    window.navigateTo = function (sectionId) {
+      if (!window.appState.isAuth) {
+        document.getElementById('login-view').classList.remove('hidden');
+        document.getElementById('main-view').classList.add('hidden');
+        return;
+      }
+
+      var role = (window.appState.currentUser && window.appState.currentUser.role) || 'kasir';
+      var allowed = ROLE_PERMISSIONS[role] || [];
+      if (!allowed.includes(sectionId)) {
+        window.showToast('Akses ditolak: Menu ini hanya untuk peran Admin', 'error');
+        return;
+      }
+
+      /* Hide all sections */
+      var sections = document.querySelectorAll('main > .p-6 > section');
+      sections.forEach(function (sec) { sec.classList.add('hidden'); });
+
+      /* Show target section */
+      var target = document.getElementById(sectionId);
+      if (target) {
+        target.classList.remove('hidden');
+      }
+
+      /* Update Sidebar Active Item */
+      var navButtons = document.querySelectorAll('.nav-item');
+      navButtons.forEach(function (btn) {
+        if (btn.getAttribute('data-nav') === sectionId) {
+          btn.classList.add('bg-white', 'text-brand-pine', 'font-extrabold', 'shadow-xs');
+          btn.classList.remove('text-brand-charcoal');
+        } else {
+          btn.classList.remove('bg-white', 'text-brand-pine', 'font-extrabold', 'shadow-xs');
+          btn.classList.add('text-brand-charcoal');
+        }
+      });
+
+      /* Update header title */
+      var titles = {
+        'section-dashboard': 'Dashboard & Ringkasan',
+        'section-pos': 'Kasir & Transaksi Penjualan',
+        'section-transaksi': 'Riwayat Transaksi Penjualan',
+        'section-produk': 'Katalog Produk & HPP',
+        'section-stok': 'Manajemen Stok & Mutasi',
+        'section-keuangan': 'Keuangan & Laba Rugi',
+        'section-pajak': 'Laporan Pajak Usaha',
+        'section-buku-besar': 'Buku Besar & Jurnal Umum',
+        'section-laporan': 'Pusat Laporan & Ekspor',
+        'section-users': 'Manajemen Akun Kasir'
+      };
+      var hTitle = document.getElementById('current-page-title');
+      if (hTitle) {
+        hTitle.textContent = titles[sectionId] || 'Sistem POS Sosis Naga';
+      }
+
+      /* Refresh specific section view */
+      if (sectionId === 'section-dashboard') renderDashboard();
+      if (sectionId === 'section-pos') renderPosProducts();
+      if (sectionId === 'section-produk') renderProductsTable();
+      if (sectionId === 'section-stok') renderStockTable();
+      if (sectionId === 'section-transaksi') renderTransactionsTable();
+      if (sectionId === 'section-keuangan') renderKeuangan();
+      if (sectionId === 'section-pajak') renderPajak();
+      if (sectionId === 'section-buku-besar') renderBukuBesar();
+      if (sectionId === 'section-users') renderUsersTable();
+    };
+
+    /* ==================== AUTHENTICATION ==================== */
+    window.handleLogin = async function (e) {
+      if (e) e.preventDefault();
+      var email = document.getElementById('login-email').value.trim();
+      var pass = document.getElementById('login-password').value.trim();
+
+      if (window.isSupabaseLive) {
+        try {
+          var res = await window.sb.auth.signInWithPassword({ email: email, password: pass });
+          if (res.error) throw res.error;
+          var u = res.data.user;
+          var profileRes = await window.sb.from('profiles').select('id,email,nama,role,aktif').eq('id', u.id).single();
+          if (profileRes.error || !profileRes.data) {
+            window.showToast('Profil pengguna belum siap. Hubungi admin.', 'error');
+            await window.sb.auth.signOut();
+            return;
+          }
+          if (!profileRes.data.aktif) {
+            window.showToast('Akun Anda dinonaktifkan.', 'error');
+            await window.sb.auth.signOut();
+            return;
+          }
+          setupSession(profileRes.data);
+          window.showToast('Login berhasil! Selamat bertugas.', 'success');
+        } catch (err) {
+          window.showToast('Login gagal: ' + (err.message || 'Periksa email dan password'), 'error');
+        }
+      } else {
+        /* Mock Mode Login */
+        var found = window.appState.data.users.find(function (u) {
+          return u.email.toLowerCase() === email.toLowerCase();
+        });
+        if (found && pass === 'das12345') {
+          if (!found.aktif) {
+            window.showToast('Akun ini sedang dinonaktifkan', 'error');
+            return;
+          }
+          setupSession(found);
+          window.showToast('Login Demo berhasil (' + found.role.toUpperCase() + ')', 'success');
+        } else {
+          window.showToast('Email atau password demo salah (Password default: das12345)', 'error');
+        }
+      }
+    };
+
+    window.quickDemoLogin = function (role) {
+      var targetEmail = role === 'admin' ? 'admin@demo.com' : 'kasir@demo.com';
+      document.getElementById('login-email').value = targetEmail;
+      document.getElementById('login-password').value = 'das12345';
+      window.handleLogin();
+    };
+
+    function setupSession(userObj) {
+      window.appState.currentUser = userObj;
+      window.appState.isAuth = true;
+
+      document.getElementById('login-view').classList.add('hidden');
+      document.getElementById('main-view').classList.remove('hidden');
+
+      /* Update Sidebar Profile */
+      document.getElementById('user-display-name').textContent = userObj.nama || userObj.email;
+      document.getElementById('user-display-email').textContent = userObj.email;
+      document.getElementById('user-display-role').textContent = (userObj.role || 'kasir').toUpperCase();
+      document.getElementById('user-avatar-text').textContent = (userObj.nama || 'SN').substring(0, 2).toUpperCase();
+
+      /* Role Visibility Filter on Sidebar */
+      var adminMenus = document.querySelectorAll('.admin-only');
+      adminMenus.forEach(function (el) {
+        if (userObj.role === 'admin') {
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+
+      /* Navigate to first permitted section */
+      if (userObj.role === 'admin') {
+        window.navigateTo('section-dashboard');
+      } else {
+        window.navigateTo('section-pos');
+      }
+    }
+
+    window.handleLogout = async function () {
+      if (window.isSupabaseLive && window.sb) {
+        try { await window.sb.auth.signOut(); } catch (e) {}
+      }
+      window.appState.currentUser = null;
+      window.appState.isAuth = false;
+      window.appState.cart = [];
+      document.getElementById('main-view').classList.add('hidden');
+      document.getElementById('login-view').classList.remove('hidden');
+      window.showToast('Anda telah keluar dari aplikasi', 'info');
+    };
+
+    /* ==================== POS & CART LOGIC ==================== */
+    window.onPosSearch = function (q) {
+      window.appState.searchQuery = q.toLowerCase();
+      renderPosProducts();
+    };
+
+    window.filterPosCategory = function (cat) {
+      window.appState.currentCategory = cat;
+      var btns = document.querySelectorAll('.pos-cat-btn');
+      btns.forEach(function (b) {
+        if (b.getAttribute('data-cat') === cat) {
+          b.classList.remove('bg-brand-sand', 'text-brand-charcoal');
+          b.classList.add('bg-brand-pine', 'text-white');
+        } else {
+          b.classList.add('bg-brand-sand', 'text-brand-charcoal');
+          b.classList.remove('bg-brand-pine', 'text-white');
+        }
+      });
+      renderPosProducts();
+    };
+
+    function renderPosProducts() {
+      var grid = document.getElementById('pos-product-grid');
+      if (!grid) return;
+      var q = window.appState.searchQuery || '';
+      var cat = window.appState.currentCategory || 'semua';
+
+      var filtered = window.appState.data.produk.filter(function (p) {
+        if (!p.aktif) return false;
+        var matchCat = cat === 'semua' || p.kategori === cat;
+        var matchQ = !q || p.nama.toLowerCase().includes(q) || p.kode.toLowerCase().includes(q);
+        return matchCat && matchQ;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div class="col-span-full py-12 text-center text-xs text-brand-sage bg-white rounded-3xl border border-brand-border">Tidak ada menu sosis yang cocok.</div>';
+        return;
+      }
+
+      var html = '';
+      filtered.forEach(function (p) {
+        var isOutOfStock = p.stok <= 0;
+        var isLowStock = p.stok <= p.minimum_stok;
+
+        html += '<div class="bg-white rounded-3xl p-4 border border-brand-border shadow-xs hover:shadow-md transition flex flex-col justify-between ' + (isOutOfStock ? 'opacity-60' : '') + '">';
+        html += '  <div>';
+        html += '    <div class="flex items-center justify-between mb-2">';
+        html += '      <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-cream text-brand-sage">' + p.kode + '</span>';
+        if (isOutOfStock) {
+          html += '    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">Habis</span>';
+        } else if (isLowStock) {
+          html += '    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">Sisa ' + p.stok + '</span>';
+        } else {
+          html += '    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">Stok ' + p.stok + '</span>';
+        }
+        html += '    </div>';
+        html += '    <h4 class="font-extrabold text-sm text-brand-pine line-clamp-2 leading-snug mb-1">' + p.nama + '</h4>';
+        html += '    <p class="text-[11px] text-brand-sage mb-3">' + p.kategori + '</p>';
+        html += '  </div>';
+
+        html += '  <div class="pt-3 border-t border-brand-border/60 flex items-center justify-between">';
+        html += '    <span class="text-sm font-extrabold text-brand-terracotta">' + window.formatRupiah(p.harga_jual) + '</span>';
+        if (isOutOfStock) {
+          html += '    <button disabled class="px-3 py-1.5 rounded-xl bg-gray-200 text-gray-500 text-xs font-bold cursor-not-allowed">Habis</button>';
+        } else {
+          html += '    <button type="button" onclick="window.addToCart(\'' + p.id + '\')" class="px-3 py-1.5 rounded-xl bg-brand-pine hover:bg-brand-terracotta text-white text-xs font-bold shadow-xs transition transform active:scale-95">+ Pesan</button>';
+        }
+        html += '  </div>';
+        html += '</div>';
+      });
+
+      grid.innerHTML = html;
+    }
+
+    window.addToCart = function (prodId) {
+      var prod = window.appState.data.produk.find(function (p) { return p.id === prodId; });
+      if (!prod || prod.stok <= 0) {
+        window.showToast('Produk tidak tersedia atau stok habis', 'error');
+        return;
+      }
+
+      var existing = window.appState.cart.find(function (item) { return item.produk_id === prodId; });
+      if (existing) {
+        if (existing.qty + 1 > prod.stok) {
+          window.showToast('Stok tidak mencukupi untuk menambah pesanan', 'error');
+          return;
+        }
+        existing.qty += 1;
+        existing.subtotal = existing.qty * existing.harga;
+      } else {
+        window.appState.cart.push({
+          produk_id: prod.id,
+          produk_nama: prod.nama,
+          harga: prod.harga_jual,
+          harga_modal: prod.harga_modal,
+          qty: 1,
+          subtotal: prod.harga_jual
+        });
+      }
+
+      renderCart();
+      window.showToast('Ditambahkan: ' + prod.nama, 'success');
+    };
+
+    window.updateCartQty = function (prodId, delta) {
+      var idx = window.appState.cart.findIndex(function (item) { return item.produk_id === prodId; });
+      if (idx === -1) return;
+
+      var prod = window.appState.data.produk.find(function (p) { return p.id === prodId; });
+      var item = window.appState.cart[idx];
+
+      if (delta > 0 && prod && (item.qty + delta > prod.stok)) {
+        window.showToast('Stok tidak mencukupi', 'error');
+        return;
+      }
+
+      item.qty += delta;
+      if (item.qty <= 0) {
+        window.appState.cart.splice(idx, 1);
+      } else {
+        item.subtotal = item.qty * item.harga;
+      }
+      renderCart();
+    };
+
+    window.clearCart = function () {
+      window.appState.cart = [];
+      renderCart();
+    };
+
+    function renderCart() {
+      var container = document.getElementById('pos-cart-items');
+      var badgeHeader = document.getElementById('header-cart-badge');
+      var badgeSidebar = document.getElementById('badge-cart-count');
+
+      var totalItems = window.appState.cart.reduce(function (sum, item) { return sum + item.qty; }, 0);
+      if (badgeHeader) badgeHeader.textContent = totalItems;
+      if (badgeSidebar) {
+        badgeSidebar.textContent = totalItems;
+        if (totalItems > 0) badgeSidebar.classList.remove('hidden');
+        else badgeSidebar.classList.add('hidden');
+      }
+
+      if (window.appState.cart.length === 0) {
+        container.innerHTML = '<div class="text-center py-12 text-brand-sage text-xs"><svg class="w-12 h-12 mx-auto text-brand-border mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>Keranjang masih kosong.<br>Pilih produk di sebelah kiri.</div>';
+        window.recalcCartTotals();
+        return;
+      }
+
+      var html = '';
+      window.appState.cart.forEach(function (item) {
+        html += '<div class="pt-2 flex items-center justify-between gap-2">';
+        html += '  <div class="overflow-hidden flex-1">';
+        html += '    <h5 class="text-xs font-bold text-brand-pine truncate">' + item.produk_nama + '</h5>';
+        html += '    <p class="text-[11px] text-brand-sage">' + window.formatRupiah(item.harga) + ' &times; ' + item.qty + '</p>';
+        html += '  </div>';
+
+        html += '  <div class="flex items-center gap-1.5 shrink-0">';
+        html += '    <button type="button" onclick="window.updateCartQty(\'' + item.produk_id + '\', -1)" class="w-6 h-6 rounded-lg bg-brand-sand hover:bg-brand-border text-brand-pine font-bold text-xs flex items-center justify-center">-</button>';
+        html += '    <span class="text-xs font-bold w-5 text-center">' + item.qty + '</span>';
+        html += '    <button type="button" onclick="window.updateCartQty(\'' + item.produk_id + '\', 1)" class="w-6 h-6 rounded-lg bg-brand-sand hover:bg-brand-border text-brand-pine font-bold text-xs flex items-center justify-center">+</button>';
+        html += '    <span class="text-xs font-extrabold text-brand-pine ml-2 w-16 text-right">' + window.formatRupiah(item.subtotal) + '</span>';
+        html += '  </div>';
+        html += '</div>';
+      });
+
+      container.innerHTML = html;
+      window.recalcCartTotals();
+    }
+
+    window.recalcCartTotals = function () {
+      var subtotal = window.appState.cart.reduce(function (sum, item) { return sum + item.subtotal; }, 0);
+      var taxToggle = document.getElementById('cart-tax-toggle');
+      var tax = (taxToggle && taxToggle.checked) ? Math.round(subtotal * 0.10) : 0;
+      var grandTotal = subtotal + tax;
+
+      document.getElementById('cart-subtotal').textContent = window.formatRupiah(subtotal);
+      document.getElementById('cart-tax-amount').textContent = window.formatRupiah(tax);
+      document.getElementById('cart-grand-total').textContent = window.formatRupiah(grandTotal);
+
+      window.calcChange();
+    };
+
+    window.setQuickPayment = function (val) {
+      var subtotal = window.appState.cart.reduce(function (sum, item) { return sum + item.subtotal; }, 0);
+      var taxToggle = document.getElementById('cart-tax-toggle');
+      var grandTotal = subtotal + ((taxToggle && taxToggle.checked) ? Math.round(subtotal * 0.10) : 0);
+
+      var input = document.getElementById('cart-payment-input');
+      if (val === 'exact') {
+        input.value = grandTotal;
+      } else {
+        input.value = Number(val);
+      }
+      window.calcChange();
+    };
+
+    window.calcChange = function () {
+      var subtotal = window.appState.cart.reduce(function (sum, item) { return sum + item.subtotal; }, 0);
+      var taxToggle = document.getElementById('cart-tax-toggle');
+      var grandTotal = subtotal + ((taxToggle && taxToggle.checked) ? Math.round(subtotal * 0.10) : 0);
+
+      var bayar = Number(document.getElementById('cart-payment-input').value) || 0;
+      var kembalian = bayar >= grandTotal ? (bayar - grandTotal) : 0;
+      document.getElementById('cart-change-display').textContent = window.formatRupiah(kembalian);
+    };
+
+    /* CHECKOUT & TRANSACTION SAVING (RPC IN LIVE, LOCAL IN MOCK) */
+    window.processCheckout = async function () {
+      if (window.appState.cart.length === 0) {
+        window.showToast('Keranjang belanja masih kosong', 'error');
+        return;
+      }
+
+      var subtotal = window.appState.cart.reduce(function (sum, item) { return sum + item.subtotal; }, 0);
+      var taxToggle = document.getElementById('cart-tax-toggle');
+      var tax = (taxToggle && taxToggle.checked) ? Math.round(subtotal * 0.10) : 0;
+      var grandTotal = subtotal + tax;
+      var bayar = Number(document.getElementById('cart-payment-input').value) || 0;
+
+      if (bayar < grandTotal) {
+        window.showToast('Uang pembayaran kurang dari total tagihan', 'error');
+        return;
+      }
+
+      var kembalian = bayar - grandTotal;
+      var kasirNama = (window.appState.currentUser && window.appState.currentUser.nama) || 'Kasir 1';
+      var payload = {
+        total: grandTotal,
+        bayar: bayar,
+        kembalian: kembalian,
+        catatan: tax > 0 ? 'Termasuk Pajak Restoran 10%' : 'Reguler',
+        items: window.appState.cart.map(function (it) {
+          return {
+            produk_id: it.produk_id,
+            produk_nama: it.produk_nama,
+            harga: it.harga,
+            harga_modal: it.harga_modal,
+            qty: it.qty,
+            subtotal: it.subtotal
+          };
+        })
+      };
+
+      if (window.isSupabaseLive) {
+        try {
+          var rpcRes = await window.sb.rpc('simpan_transaksi', { p_payload: payload });
+          if (rpcRes.error) throw rpcRes.error;
+          var resData = rpcRes.data;
+          window.showToast('Transaksi berhasil disimpan (' + resData.kode + ')', 'success');
+
+          /* Refresh local state from DB */
+          await refreshAllDataLive();
+          showReceiptModal(resData.kode, payload.items, grandTotal, tax, bayar, kembalian, kasirNama);
+        } catch (err) {
+          window.showToast('Gagal memproses transaksi: ' + (err.message || 'Error database'), 'error');
+        }
+      } else {
+        /* Mock Mode Checkout */
+        var trxKode = window.DB.nextCode('TRX');
+        var trxId = window.DB.newId();
+        var nowIso = new Date().toISOString();
+
+        var newTrx = {
+          id: trxId,
+          kode: trxKode,
+          tanggal: nowIso,
+          user_id: window.appState.currentUser.id,
+          kasir_nama: kasirNama,
+          total: grandTotal,
+          bayar: bayar,
+          kembalian: kembalian,
+          catatan: payload.catatan
+        };
+        window.appState.data.transaksi.unshift(newTrx);
+
+        /* Detail & Kurangi Stok */
+        var totalHpp = 0;
+        payload.items.forEach(function (it) {
+          window.appState.data.detail_transaksi.push({
+            id: window.DB.newId(),
+            transaksi_id: trxId,
+            produk_id: it.produk_id,
+            produk_nama: it.produk_nama,
+            harga: it.harga,
+            harga_modal: it.harga_modal,
+            qty: it.qty,
+            subtotal: it.subtotal
+          });
+
+          /* Potong stok produk */
+          var prod = window.appState.data.produk.find(function (p) { return p.id === it.produk_id; });
+          if (prod) {
+            prod.stok = Math.max(0, prod.stok - it.qty);
+          }
+
+          /* Catat mutasi */
+          window.appState.data.stok_mutasi.unshift({
+            id: window.DB.newId(),
+            produk_id: it.produk_id,
+            tanggal: nowIso,
+            jenis: 'penjualan',
+            qty: -it.qty,
+            keterangan: 'Penjualan Nota ' + trxKode
+          });
+
+          totalHpp += (it.harga_modal * it.qty);
+        });
+
+        /* Catat Buku Besar Otomatis */
+        window.appState.data.buku_besar.unshift(
+          { id: window.DB.newId(), nomor_jurnal: trxKode, tanggal: nowIso.split('T')[0], referensi: trxKode, akun_id: '1001', keterangan: 'Penerimaan Penjualan Sosis Naga ' + trxKode, debit: grandTotal, kredit: 0 },
+          { id: window.DB.newId(), nomor_jurnal: trxKode, tanggal: nowIso.split('T')[0], referensi: trxKode, akun_id: '4001', keterangan: 'Pendapatan Penjualan ' + trxKode, debit: 0, kredit: grandTotal }
+        );
+        if (totalHpp > 0) {
+          window.appState.data.buku_besar.unshift(
+            { id: window.DB.newId(), nomor_jurnal: trxKode, tanggal: nowIso.split('T')[0], referensi: trxKode, akun_id: '5001', keterangan: 'Beban Pokok Penjualan (HPP) ' + trxKode, debit: totalHpp, kredit: 0 },
+            { id: window.DB.newId(), nomor_jurnal: trxKode, tanggal: nowIso.split('T')[0], referensi: trxKode, akun_id: '1101', keterangan: 'Pengurangan Persediaan Sosis ' + trxKode, debit: 0, kredit: totalHpp }
+          );
+        }
+
+        saveMockDatabase();
+        window.showToast('Transaksi berhasil disimpan (' + trxKode + ')', 'success');
+        showReceiptModal(trxKode, payload.items, grandTotal, tax, bayar, kembalian, kasirNama);
+      }
+
+      /* Reset Cart & Input */
+      window.appState.cart = [];
+      document.getElementById('cart-payment-input').value = '';
+      renderCart();
+      renderPosProducts();
+    };
+
+    /* ==================== RECEIPT PRINTING MODAL ==================== */
+    function showReceiptModal(kode, items, total, pajak, bayar, kembalian, kasir) {
+      document.getElementById('rcpt-kode').textContent = kode;
+      document.getElementById('rcpt-waktu').textContent = new Date().toLocaleString('id-ID');
+      document.getElementById('rcpt-kasir').textContent = kasir;
+
+      var subtotal = items.reduce(function (s, i) { return s + i.subtotal; }, 0);
+      document.getElementById('rcpt-subtotal').textContent = window.formatRupiah(subtotal);
+      document.getElementById('rcpt-pajak').textContent = window.formatRupiah(pajak);
+      document.getElementById('rcpt-total').textContent = window.formatRupiah(total);
+      document.getElementById('rcpt-bayar').textContent = window.formatRupiah(bayar);
+      document.getElementById('rcpt-kembalian').textContent = window.formatRupiah(kembalian);
+
+      var container = document.getElementById('rcpt-items-list');
+      var html = '';
+      items.forEach(function (i) {
+        html += '<div class="flex justify-between items-center text-[11px]">';
+        html += '  <span>' + i.produk_nama + ' &times; ' + i.qty + '</span>';
+        html += '  <span class="font-bold">' + window.formatRupiah(i.subtotal) + '</span>';
+        html += '</div>';
+      });
+      container.innerHTML = html;
+
+      document.getElementById('modal-receipt').classList.remove('hidden');
+    }
+
+    window.printReceipt = function () {
+      window.print();
+    };
+
+    window.closeReceiptModal = function () {
+      document.getElementById('modal-receipt').classList.add('hidden');
+    };
+
+    /* ==================== DASHBOARD RENDERING & CHART ==================== */
+    var salesChartInstance = null;
+    function renderDashboard() {
+      var greeting = document.getElementById('dashboard-greeting');
+      var uNama = (window.appState.currentUser && window.appState.currentUser.nama) || 'Kasir';
+      if (greeting) greeting.textContent = 'Selamat Datang, ' + uNama + '!';
+
+      var todayStr = new Date().toISOString().split('T')[0];
+      var todayTrx = window.appState.data.transaksi.filter(function (t) {
+        return (t.tanggal || '').startsWith(todayStr);
+      });
+
+      var todayOmset = todayTrx.reduce(function (sum, t) { return sum + Number(t.total || 0); }, 0);
+      document.getElementById('stat-omset-today').textContent = window.formatRupiah(todayOmset);
+      document.getElementById('stat-omset-count').textContent = todayTrx.length + ' transaksi hari ini';
+
+      /* Calculate Today HPP & Gross Profit */
+      var todayHpp = 0;
+      todayTrx.forEach(function (t) {
+        var details = window.appState.data.detail_transaksi.filter(function (d) { return d.transaksi_id === t.id; });
+        details.forEach(function (d) {
+          todayHpp += (Number(d.harga_modal || 0) * Number(d.qty || 1));
+        });
+      });
+      var todayProfit = todayOmset - todayHpp;
+      document.getElementById('stat-profit-today').textContent = window.formatRupiah(todayProfit);
+
+      /* Month Omset */
+      var curMonth = todayStr.substring(0, 7);
+      var monthTrx = window.appState.data.transaksi.filter(function (t) {
+        return (t.tanggal || '').startsWith(curMonth);
+      });
+      var monthOmset = monthTrx.reduce(function (sum, t) { return sum + Number(t.total || 0); }, 0);
+      document.getElementById('stat-omset-month').textContent = window.formatRupiah(monthOmset);
+      document.getElementById('stat-month-count').textContent = monthTrx.length + ' transaksi bulan ini';
+
+      /* Low Stock Count */
+      var lowStockProds = window.appState.data.produk.filter(function (p) {
+        return p.aktif && p.stok <= p.minimum_stok;
+      });
+      document.getElementById('stat-low-stock-count').textContent = lowStockProds.length;
+
+      /* Low Stock Alert List Widget */
+      var listWidget = document.getElementById('dashboard-low-stock-list');
+      if (listWidget) {
+        if (lowStockProds.length === 0) {
+          listWidget.innerHTML = '<p class="text-xs text-brand-sage text-center py-6">Semua stok sosis aman.</p>';
+        } else {
+          var wHtml = '';
+          lowStockProds.slice(0, 4).forEach(function (p) {
+            wHtml += '<div class="flex items-center justify-between p-2.5 rounded-2xl bg-red-50/70 border border-red-100">';
+            wHtml += '  <div>';
+            wHtml += '    <h5 class="text-xs font-bold text-brand-pine">' + p.nama + '</h5>';
+            wHtml += '    <p class="text-[10px] text-red-700">Sisa ' + p.stok + ' (Batas Min: ' + p.minimum_stok + ')</p>';
+            wHtml += '  </div>';
+            wHtml += '  <button type="button" onclick="window.navigateTo(\'section-stok\')" class="px-2.5 py-1 bg-red-600 text-white text-[11px] font-bold rounded-xl hover:bg-red-700">Restock</button>';
+            wHtml += '</div>';
+          });
+          listWidget.innerHTML = wHtml;
+        }
+      }
+
+      /* Recent Trx Table Widget */
+      var recBody = document.getElementById('dashboard-recent-trx');
+      if (recBody) {
+        var recTrx = window.appState.data.transaksi.slice(0, 5);
+        if (recTrx.length === 0) {
+          recBody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-xs text-brand-sage">Belum ada transaksi hari ini</td></tr>';
+        } else {
+          var rHtml = '';
+          recTrx.forEach(function (t) {
+            rHtml += '<tr class="hover:bg-brand-cream/60 transition">';
+            rHtml += '  <td class="py-3 px-3 font-mono font-bold text-xs text-brand-pine">' + t.kode + '</td>';
+            rHtml += '  <td class="py-3 px-3 text-xs text-brand-sage">' + new Date(t.tanggal).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + '</td>';
+            rHtml += '  <td class="py-3 px-3 text-xs font-medium">' + (t.kasir_nama || 'Kasir') + '</td>';
+            rHtml += '  <td class="py-3 px-3 text-xs font-extrabold text-brand-terracotta text-right">' + window.formatRupiah(t.total) + '</td>';
+            rHtml += '  <td class="py-3 px-3 text-center"><button type="button" onclick="window.viewTrxDetail(\'' + t.id + '\')" class="text-xs font-bold text-brand-pine hover:underline">Detail</button></td>';
+            rHtml += '</tr>';
+          });
+          recBody.innerHTML = rHtml;
+        }
+      }
+
+      /* Chart.js Init */
+      initSalesChart();
+    }
+
+    function initSalesChart() {
+      var canvas = document.getElementById('salesChart');
+      if (!canvas || typeof Chart === 'undefined') return;
+
+      /* Last 7 Days labels & values */
+      var labels = [];
+      var dataPoints = [];
+      for (var i = 6; i >= 0; i--) {
+        var d = new Date();
+        d.setDate(d.getDate() - i);
+        var dStr = d.toISOString().split('T')[0];
+        labels.push(d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' }));
+
+        var sumDay = window.appState.data.transaksi.filter(function (t) {
+          return (t.tanggal || '').startsWith(dStr);
+        }).reduce(function (s, t) { return s + Number(t.total || 0); }, 0);
+        dataPoints.push(sumDay);
+      }
+
+      if (salesChartInstance) {
+        salesChartInstance.destroy();
+      }
+
+      salesChartInstance = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Omset Penjualan (Rp)',
+            data: dataPoints,
+            borderColor: '#C84B20',
+            backgroundColor: 'rgba(200, 75, 32, 0.08)',
+            fill: true,
+            tension: 0.35,
+            borderWidth: 3,
+            pointBackgroundColor: '#132B24',
+            pointRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function (val) {
+                  return 'Rp ' + (val / 1000) + 'k';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    /* ==================== PRODUK MANAGEMENT ==================== */
+    function renderProductsTable() {
+      var tbody = document.getElementById('table-produk-body');
+      if (!tbody) return;
+
+      var prods = window.appState.data.produk;
+      if (prods.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="py-6 text-center text-xs text-brand-sage">Belum ada produk terdaftar</td></tr>';
+        return;
+      }
+
+      var html = '';
+      prods.forEach(function (p) {
+        var margin = p.harga_jual - p.harga_modal;
+        var marginPercent = p.harga_modal > 0 ? Math.round((margin / p.harga_modal) * 100) : 0;
+        var isLow = p.stok <= p.minimum_stok;
+
+        html += '<tr class="hover:bg-brand-cream/50 transition">';
+        html += '  <td class="py-3 px-3 font-mono text-xs font-bold">' + p.kode + '</td>';
+        html += '  <td class="py-3 px-3 font-bold text-brand-pine">' + p.nama + '</td>';
+        html += '  <td class="py-3 px-3 text-xs text-brand-sage">' + p.kategori + '</td>';
+        html += '  <td class="py-3 px-3 text-right text-xs font-semibold">' + window.formatRupiah(p.harga_modal) + '</td>';
+        html += '  <td class="py-3 px-3 text-right text-xs font-extrabold text-brand-terracotta">' + window.formatRupiah(p.harga_jual) + '</td>';
+        html += '  <td class="py-3 px-3 text-right text-xs text-emerald-700 font-bold">' + window.formatRupiah(margin) + ' (' + marginPercent + '%)</td>';
+        html += '  <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-bold ' + (isLow ? 'bg-red-100 text-red-700' : 'bg-emerald-50 text-emerald-700') + '">' + p.stok + ' / min ' + p.minimum_stok + '</span></td>';
+        html += '  <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ' + (p.aktif ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600') + '">' + (p.aktif ? 'Aktif' : 'Nonaktif') + '</span></td>';
+        html += '  <td class="py-3 px-3 text-center space-x-2">';
+        html += '    <button type="button" onclick="window.editProduct(\'' + p.id + '\')" class="text-xs font-bold text-brand-pine hover:underline">Edit</button>';
+        html += '    <button type="button" onclick="window.toggleProductActive(\'' + p.id + '\')" class="text-xs font-bold text-brand-sage hover:text-brand-pine">' + (p.aktif ? 'Nonaktifkan' : 'Aktifkan') + '</button>';
+        html += '  </td>';
+        html += '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    window.openProductModal = function (prodObj) {
+      document.getElementById('modal-product-title').textContent = prodObj ? 'Ubah Produk Sosis' : 'Tambah Produk Baru';
+      document.getElementById('prod-id').value = (prodObj && prodObj.id) || '';
+      document.getElementById('prod-kode').value = (prodObj && prodObj.kode) || '';
+      document.getElementById('prod-nama').value = (prodObj && prodObj.nama) || '';
+      document.getElementById('prod-kategori').value = (prodObj && prodObj.kategori) || 'Sosis Bakar';
+      document.getElementById('prod-hpp').value = (prodObj && prodObj.harga_modal) || '';
+      document.getElementById('prod-harga').value = (prodObj && prodObj.harga_jual) || '';
+      document.getElementById('prod-stok').value = (prodObj && prodObj.stok) || '';
+      document.getElementById('prod-min-stok').value = (prodObj && prodObj.minimum_stok) || 10;
+      document.getElementById('prod-aktif').checked = prodObj ? Boolean(prodObj.aktif) : true;
+
+      document.getElementById('modal-product').classList.remove('hidden');
+    };
+
+    window.closeProductModal = function () {
+      document.getElementById('modal-product').classList.add('hidden');
+    };
+
+    window.editProduct = function (id) {
+      var prod = window.appState.data.produk.find(function (p) { return p.id === id; });
+      if (prod) window.openProductModal(prod);
+    };
+
+    window.handleSaveProduct = async function (e) {
+      e.preventDefault();
+      var id = document.getElementById('prod-id').value;
+      var kode = document.getElementById('prod-kode').value.trim();
+      var nama = document.getElementById('prod-nama').value.trim();
+      var kategori = document.getElementById('prod-kategori').value;
+      var hpp = Number(document.getElementById('prod-hpp').value) || 0;
+      var harga = Number(document.getElementById('prod-harga').value) || 0;
+      var stok = Number(document.getElementById('prod-stok').value) || 0;
+      var minStok = Number(document.getElementById('prod-min-stok').value) || 5;
+      var aktif = document.getElementById('prod-aktif').checked;
+
+      var payload = {
+        kode: kode,
+        nama: nama,
+        kategori: kategori,
+        harga_modal: hpp,
+        harga_jual: harga,
+        stok: stok,
+        minimum_stok: minStok,
+        aktif: aktif
+      };
+
+      if (window.isSupabaseLive) {
+        try {
+          if (id) {
+            var upd = await window.sb.from('produk').update(payload).eq('id', id);
+            if (upd.error) throw upd.error;
+          } else {
+            payload.id = window.DB.newId();
+            var ins = await window.sb.from('produk').insert([payload]);
+            if (ins.error) throw ins.error;
+          }
+          await refreshAllDataLive();
+          window.showToast('Produk berhasil disimpan ke Supabase', 'success');
+        } catch (err) {
+          window.showToast('Gagal menyimpan produk: ' + (err.message || 'Error'), 'error');
+          return;
+        }
+      } else {
+        if (id) {
+          var target = window.appState.data.produk.find(function (p) { return p.id === id; });
+          if (target) Object.assign(target, payload);
+        } else {
+          payload.id = window.DB.newId();
+          window.appState.data.produk.push(payload);
+        }
+        saveMockDatabase();
+        window.showToast('Produk tersimpan di database lokal', 'success');
+      }
+
+      window.closeProductModal();
+      renderProductsTable();
+    };
+
+    window.toggleProductActive = async function (id) {
+      var prod = window.appState.data.produk.find(function (p) { return p.id === id; });
+      if (!prod) return;
+      var newStatus = !prod.aktif;
+
+      if (window.isSupabaseLive) {
+        try {
+          var res = await window.sb.from('produk').update({ aktif: newStatus }).eq('id', id);
+          if (res.error) throw res.error;
+          prod.aktif = newStatus;
+          window.showToast('Status produk diubah', 'success');
+        } catch (err) {
+          window.showToast('Gagal mengubah status: ' + err.message, 'error');
+        }
+      } else {
+        prod.aktif = newStatus;
+        saveMockDatabase();
+        window.showToast('Status produk diubah', 'success');
+      }
+      renderProductsTable();
+    };
+
+    /* ==================== STOCK ADJUSTMENT ==================== */
+    function renderStockTable() {
+      var totalVal = window.appState.data.produk.reduce(function (sum, p) {
+        return sum + (Number(p.stok || 0) * Number(p.harga_modal || 0));
+      }, 0);
+      document.getElementById('stok-total-value').textContent = window.formatRupiah(totalVal);
+      document.getElementById('stok-total-sku').textContent = window.appState.data.produk.length + ' SKU';
+
+      var lowCount = window.appState.data.produk.filter(function (p) { return p.stok <= p.minimum_stok; }).length;
+      document.getElementById('stok-alert-count').textContent = lowCount + ' SKU';
+
+      var tbody = document.getElementById('table-stok-mutasi-body');
+      if (!tbody) return;
+
+      var mutasi = window.appState.data.stok_mutasi.slice(0, 30);
+      if (mutasi.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-xs text-brand-sage">Belum ada riwayat mutasi stok</td></tr>';
+        return;
+      }
+
+      var html = '';
+      mutasi.forEach(function (m) {
+        var prod = window.appState.data.produk.find(function (p) { return p.id === m.produk_id; });
+        var pName = prod ? prod.nama : 'Produk ID ' + (m.produk_id || '').substring(0, 8);
+        var isPositive = m.qty > 0;
+
+        html += '<tr class="hover:bg-brand-cream/50 transition">';
+        html += '  <td class="py-2.5 px-3 text-xs text-brand-sage">' + new Date(m.tanggal).toLocaleString('id-ID') + '</td>';
+        html += '  <td class="py-2.5 px-3 text-xs font-bold text-brand-pine">' + pName + '</td>';
+        html += '  <td class="py-2.5 px-3 text-xs font-semibold uppercase">' + m.jenis + '</td>';
+        html += '  <td class="py-2.5 px-3 text-right text-xs font-extrabold ' + (isPositive ? 'text-emerald-700' : 'text-red-600') + '">' + (isPositive ? '+' : '') + m.qty + '</td>';
+        html += '  <td class="py-2.5 px-3 text-xs text-brand-charcoal">' + (m.keterangan || '-') + '</td>';
+        html += '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    window.openStockModal = function () {
+      var select = document.getElementById('adj-produk-id');
+      select.innerHTML = '';
+      window.appState.data.produk.forEach(function (p) {
+        var opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.nama + ' (Stok: ' + p.stok + ')';
+        select.appendChild(opt);
+      });
+      document.getElementById('modal-stock').classList.remove('hidden');
+    };
+
+    window.closeStockModal = function () {
+      document.getElementById('modal-stock').classList.add('hidden');
+    };
+
+    window.handleSaveStockAdjustment = async function (e) {
+      e.preventDefault();
+      var prodId = document.getElementById('adj-produk-id').value;
+      var jenis = document.getElementById('adj-jenis').value;
+      var qty = Number(document.getElementById('adj-qty').value) || 0;
+      var ket = document.getElementById('adj-keterangan').value.trim();
+
+      if (window.isSupabaseLive) {
+        try {
+          var res = await window.sb.rpc('sesuaikan_stok', {
+            p_produk_id: prodId,
+            p_jenis: jenis,
+            p_qty: qty,
+            p_keterangan: ket
+          });
+          if (res.error) throw res.error;
+          await refreshAllDataLive();
+          window.showToast('Penyesuaian stok berhasil', 'success');
+        } catch (err) {
+          window.showToast('Gagal sesuaikan stok: ' + err.message, 'error');
+          return;
+        }
+      } else {
+        var prod = window.appState.data.produk.find(function (p) { return p.id === prodId; });
+        if (prod) {
+          var delta = jenis === 'masuk' ? qty : (qty - prod.stok);
+          prod.stok = jenis === 'masuk' ? (prod.stok + qty) : qty;
+
+          window.appState.data.stok_mutasi.unshift({
+            id: window.DB.newId(),
+            produk_id: prodId,
+            tanggal: new Date().toISOString(),
+            jenis: jenis,
+            qty: delta,
+            keterangan: ket
+          });
+          saveMockDatabase();
+          window.showToast('Penyesuaian stok lokal berhasil', 'success');
+        }
+      }
+
+      window.closeStockModal();
+      renderStockTable();
+    };
+
+    /* ==================== TRANSACTIONS VIEW ==================== */
+    function renderTransactionsTable() {
+      var tbody = document.getElementById('table-riwayat-trx-body');
+      if (!tbody) return;
+
+      var trxs = window.appState.data.transaksi;
+      if (trxs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-xs text-brand-sage">Belum ada riwayat transaksi penjualan</td></tr>';
+        return;
+      }
+
+      var html = '';
+      trxs.forEach(function (t) {
+        html += '<tr class="hover:bg-brand-cream/50 transition">';
+        html += '  <td class="py-3 px-3 font-mono font-bold text-xs text-brand-pine">' + t.kode + '</td>';
+        html += '  <td class="py-3 px-3 text-xs text-brand-sage">' + new Date(t.tanggal).toLocaleString('id-ID') + '</td>';
+        html += '  <td class="py-3 px-3 text-xs font-semibold">' + (t.kasir_nama || 'Kasir') + '</td>';
+        html += '  <td class="py-3 px-3 text-right text-xs font-extrabold text-brand-terracotta">' + window.formatRupiah(t.total) + '</td>';
+        html += '  <td class="py-3 px-3 text-right text-xs text-brand-charcoal">' + window.formatRupiah(t.bayar) + '</td>';
+        html += '  <td class="py-3 px-3 text-right text-xs text-emerald-700 font-bold">' + window.formatRupiah(t.kembalian) + '</td>';
+        html += '  <td class="py-3 px-3 text-center">';
+        html += '    <button type="button" onclick="window.viewTrxDetail(\'' + t.id + '\')" class="text-xs font-bold text-brand-pine hover:underline">Rincian</button>';
+        html += '  </td>';
+        html += '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    window.filterTransactions = function () {
+      var filterDate = document.getElementById('filter-trx-date').value;
+      var tbody = document.getElementById('table-riwayat-trx-body');
+      if (!filterDate) {
+        renderTransactionsTable();
+        return;
+      }
+      var filtered = window.appState.data.transaksi.filter(function (t) {
+        return (t.tanggal || '').startsWith(filterDate);
+      });
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-xs text-brand-sage">Tidak ada transaksi pada tanggal tersebut</td></tr>';
+        return;
+      }
+      var html = '';
+      filtered.forEach(function (t) {
+        html += '<tr class="hover:bg-brand-cream/50 transition">';
+        html += '  <td class="py-3 px-3 font-mono font-bold text-xs text-brand-pine">' + t.kode + '</td>';
+        html += '  <td class="py-3 px-3 text-xs text-brand-sage">' + new Date(t.tanggal).toLocaleString('id-ID') + '</td>';
+        html += '  <td class="py-3 px-3 text-xs font-semibold">' + (t.kasir_nama || 'Kasir') + '</td>';
+        html += '  <td class="py-3 px-3 text-right text-xs font-extrabold text-brand-terracotta">' + window.formatRupiah(t.total) + '</td>';
+        html += '  <td class="py-3 px-3 text-right text-xs text-brand-charcoal">' + window.formatRupiah(t.bayar) + '</td>';
+        html += '  <td class="py-3 px-3 text-right text-xs text-emerald-700 font-bold">' + window.formatRupiah(t.kembalian) + '</td>';
+        html += '  <td class="py-3 px-3 text-center"><button type="button" onclick="window.viewTrxDetail(\'' + t.id + '\')" class="text-xs font-bold text-brand-pine hover:underline">Rincian</button></td>';
+        html += '</tr>';
+      });
+      tbody.innerHTML = html;
+    };
+
+    window.viewTrxDetail = function (trxId) {
+      var trx = window.appState.data.transaksi.find(function (t) { return t.id === trxId; });
+      if (!trx) return;
+
+      var details = window.appState.data.detail_transaksi.filter(function (d) { return d.transaksi_id === trxId; });
+      document.getElementById('detail-trx-title').textContent = 'Nota ' + trx.kode;
+      document.getElementById('detail-trx-meta').textContent = new Date(trx.tanggal).toLocaleString('id-ID') + ' • Kasir: ' + (trx.kasir_nama || 'Kasir');
+      document.getElementById('detail-trx-total').textContent = window.formatRupiah(trx.total);
+      document.getElementById('detail-trx-bayar').textContent = window.formatRupiah(trx.bayar);
+      document.getElementById('detail-trx-kembalian').textContent = window.formatRupiah(trx.kembalian);
+
+      var tbody = document.getElementById('detail-trx-items-body');
+      var html = '';
+      details.forEach(function (d) {
+        html += '<tr>';
+        html += '  <td class="py-2 font-medium">' + d.produk_nama + '</td>';
+        html += '  <td class="py-2 text-right">' + window.formatRupiah(d.harga) + '</td>';
+        html += '  <td class="py-2 text-center">' + d.qty + '</td>';
+        html += '  <td class="py-2 text-right font-bold">' + window.formatRupiah(d.subtotal) + '</td>';
+        html += '</tr>';
+      });
+      tbody.innerHTML = html;
+
+      document.getElementById('btn-reprint-receipt').onclick = function () {
+        showReceiptModal(trx.kode, details, trx.total, 0, trx.bayar, trx.kembalian, trx.kasir_nama);
+        window.closeDetailTrxModal();
+      };
+
+      document.getElementById('modal-detail-trx').classList.remove('hidden');
+    };
+
+    window.closeDetailTrxModal = function () {
+      document.getElementById('modal-detail-trx').classList.add('hidden');
+    };
+
+    /* ==================== KEUANGAN & LABA RUGI ==================== */
+    function renderKeuangan() {
+      var totalOmset = window.appState.data.transaksi.reduce(function (sum, t) { return sum + Number(t.total || 0); }, 0);
+      var totalHpp = 0;
+      window.appState.data.detail_transaksi.forEach(function (d) {
+        totalHpp += (Number(d.harga_modal || 0) * Number(d.qty || 1));
+      });
+      var grossProfit = totalOmset - totalHpp;
+
+      var totalBiaya = window.appState.data.biaya.reduce(function (sum, b) { return sum + Number(b.jumlah || 0); }, 0);
+      var netProfit = grossProfit - totalBiaya;
+
+      document.getElementById('fin-pendapatan').textContent = window.formatRupiah(totalOmset);
+      document.getElementById('fin-hpp').textContent = window.formatRupiah(totalHpp);
+      document.getElementById('fin-laba-kotor').textContent = window.formatRupiah(grossProfit);
+      document.getElementById('fin-biaya').textContent = window.formatRupiah(totalBiaya);
+      document.getElementById('fin-laba-bersih').textContent = window.formatRupiah(netProfit);
+
+      /* Biaya Table */
+      var tbody = document.getElementById('table-biaya-body');
+      if (!tbody) return;
+      var biayas = window.appState.data.biaya;
+      if (biayas.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-xs text-brand-sage">Belum ada pencatatan beban operasional</td></tr>';
+        return;
+      }
+      var html = '';
+      biayas.forEach(function (b) {
+        html += '<tr class="hover:bg-brand-cream/50 transition">';
+        html += '  <td class="py-2.5 px-3 text-xs text-brand-sage">' + b.tanggal + '</td>';
+        html += '  <td class="py-2.5 px-3 text-xs font-bold text-brand-pine">' + b.kategori + '</td>';
+        html += '  <td class="py-2.5 px-3 text-xs text-brand-charcoal">' + b.keterangan + '</td>';
+        html += '  <td class="py-2.5 px-3 text-right text-xs font-bold text-red-600">' + window.formatRupiah(b.jumlah) + '</td>';
+        html += '  <td class="py-2.5 px-3 text-center"><button type="button" onclick="window.deleteBiaya(\'' + b.id + '\')" class="text-xs text-red-600 hover:underline">Hapus</button></td>';
+        html += '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    window.handleSaveBiaya = async function (e) {
+      e.preventDefault();
+      var tgl = document.getElementById('biaya-tanggal').value;
+      var kat = document.getElementById('biaya-kategori').value;
+      var ket = document.getElementById('biaya-keterangan').value.trim();
+      var jml = Number(document.getElementById('biaya-jumlah').value) || 0;
+
+      var newBiaya = {
+        id: window.DB.newId(),
+        tanggal: tgl,
+        kategori: kat,
+        keterangan: ket,
+        jumlah: jml
+      };
+
+      if (window.isSupabaseLive) {
+        try {
+          var ins = await window.sb.from('biaya').insert([newBiaya]);
+          if (ins.error) throw ins.error;
+          await refreshAllDataLive();
+          window.showToast('Biaya operasional dicatat di Supabase', 'success');
+        } catch (err) {
+          window.showToast('Gagal simpan biaya: ' + err.message, 'error');
+          return;
+        }
+      } else {
+        window.appState.data.biaya.unshift(newBiaya);
+        /* Catat buku besar jurnal otomatis */
+        window.appState.data.buku_besar.unshift(
+          { id: window.DB.newId(), nomor_jurnal: window.DB.nextCode('JRN'), tanggal: tgl, referensi: 'BIAYA', akun_id: '6001', keterangan: ket, debit: jml, kredit: 0 },
+          { id: window.DB.newId(), nomor_jurnal: window.DB.nextCode('JRN'), tanggal: tgl, referensi: 'BIAYA', akun_id: '1001', keterangan: 'Pengeluaran Kas: ' + ket, debit: 0, kredit: jml }
+        );
+        saveMockDatabase();
+        window.showToast('Biaya operasional dicatat lokal', 'success');
+      }
+
+      document.getElementById('biaya-keterangan').value = '';
+      document.getElementById('biaya-jumlah').value = '';
+      renderKeuangan();
+    };
+
+    window.deleteBiaya = async function (id) {
+      if (!confirm('Yakin ingin menghapus catatan biaya ini?')) return;
+      if (window.isSupabaseLive) {
+        try {
+          var res = await window.sb.from('biaya').delete().eq('id', id);
+          if (res.error) throw res.error;
+          await refreshAllDataLive();
+          window.showToast('Biaya dihapus', 'success');
+        } catch (err) {
+          window.showToast('Gagal hapus biaya: ' + err.message, 'error');
+        }
+      } else {
+        var idx = window.appState.data.biaya.findIndex(function (b) { return b.id === id; });
+        if (idx !== -1) window.appState.data.biaya.splice(idx, 1);
+        saveMockDatabase();
+        window.showToast('Biaya dihapus', 'success');
+      }
+      renderKeuangan();
+    };
+
+    /* ==================== PAJAK LOGIC ==================== */
+    function renderPajak() {
+      var tbody = document.getElementById('table-pajak-body');
+      if (!tbody) return;
+      var pajaks = window.appState.data.pajak;
+      if (pajaks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-xs text-brand-sage">Belum ada catatan setoran atau rekapitulasi pajak</td></tr>';
+        return;
+      }
+      var html = '';
+      pajaks.forEach(function (pj) {
+        html += '<tr class="hover:bg-brand-cream/50 transition">';
+        html += '  <td class="py-3 px-3 font-bold text-xs text-brand-pine">' + pj.periode + '</td>';
+        html += '  <td class="py-3 px-3 text-xs">' + pj.jenis_pajak + '</td>';
+        html += '  <td class="py-3 px-3 text-right text-xs font-semibold">' + pj.tarif + '%</td>';
+        html += '  <td class="py-3 px-3 text-right text-xs font-semibold">' + window.formatRupiah(pj.dasar_pengenaan) + '</td>';
+        html += '  <td class="py-3 px-3 text-right text-xs font-bold text-brand-terracotta">' + window.formatRupiah(pj.nilai_pajak) + '</td>';
+        html += '  <td class="py-3 px-3 text-xs text-brand-sage">' + (pj.keterangan || '-') + '</td>';
+        html += '  <td class="py-3 px-3 text-center"><button type="button" onclick="window.deletePajak(\'' + pj.id + '\')" class="text-xs text-red-600 hover:underline">Hapus</button></td>';
+        html += '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    window.openPajakModal = function () {
+      var periode = prompt('Masukkan Periode Pajak (Contoh: 2026-11):', new Date().toISOString().substring(0, 7));
+      if (!periode) return;
+
+      var jenis = prompt('Pilih Jenis Pajak (1: PPh Final UMKM 0.5%, 2: PB1 Restoran 10%):', '1');
+      var tarif = jenis === '2' ? 10 : 0.5;
+      var jenisNama = jenis === '2' ? 'PB1 Pajak Restoran (10%)' : 'PPh Final UMKM PP 55 (0.5%)';
+
+      /* Calculate Omset on that period */
+      var totalOmset = window.appState.data.transaksi.filter(function (t) {
+        return (t.tanggal || '').startsWith(periode);
+      }).reduce(function (sum, t) { return sum + Number(t.total || 0); }, 0);
+
+      var nilaiPajak = Math.round((totalOmset * tarif) / 100);
+
+      var newPajak = {
+        id: window.DB.newId(),
+        periode: periode,
+        jenis_pajak: jenisNama,
+        tarif: tarif,
+        dasar_pengenaan: totalOmset,
+        nilai_pajak: nilaiPajak,
+        keterangan: 'Perhitungan otomatis dari omset periode ' + periode
+      };
+
+      if (window.isSupabaseLive) {
+        window.sb.from('pajak').insert([newPajak]).then(function (res) {
+          if (res.error) window.showToast('Error pajak: ' + res.error.message, 'error');
+          else {
+            refreshAllDataLive();
+            window.showToast('Pajak berhasil dicatat', 'success');
+          }
+        });
+      } else {
+        window.appState.data.pajak.unshift(newPajak);
+        saveMockDatabase();
+        window.showToast('Pajak berhasil dicatat lokal', 'success');
+        renderPajak();
+      }
+    };
+
+    window.deletePajak = function (id) {
+      if (!confirm('Hapus pencatatan pajak ini?')) return;
+      if (window.isSupabaseLive) {
+        window.sb.from('pajak').delete().eq('id', id).then(function () {
+          refreshAllDataLive();
+          window.showToast('Data pajak dihapus', 'success');
+        });
+      } else {
+        var idx = window.appState.data.pajak.findIndex(function (p) { return p.id === id; });
+        if (idx !== -1) window.appState.data.pajak.splice(idx, 1);
+        saveMockDatabase();
+        renderPajak();
+      }
+    };
+
+    /* ==================== BUKU BESAR ==================== */
+    function renderBukuBesar() {
+      var select = document.getElementById('filter-buku-akun');
+      if (select && select.options.length <= 1) {
+        window.appState.data.akun.forEach(function (ak) {
+          var opt = document.createElement('option');
+          opt.value = ak.id || ak.kode_akun;
+          opt.textContent = ak.kode_akun + ' - ' + ak.nama_akun;
+          select.appendChild(opt);
+        });
+      }
+
+      var tbody = document.getElementById('table-buku-besar-body');
+      if (!tbody) return;
+
+      var filterAkun = (select && select.value) || '';
+      var jurnals = window.appState.data.buku_besar.filter(function (j) {
+        if (!filterAkun) return true;
+        return j.akun_id === filterAkun;
+      });
+
+      var totalDebit = 0;
+      var totalKredit = 0;
+      jurnals.forEach(function (j) {
+        totalDebit += Number(j.debit || 0);
+        totalKredit += Number(j.kredit || 0);
+      });
+
+      document.getElementById('bb-total-debit').textContent = window.formatRupiah(totalDebit);
+      document.getElementById('bb-total-kredit').textContent = window.formatRupiah(totalKredit);
+      var selisih = Math.abs(totalDebit - totalKredit);
+      var statusBal = document.getElementById('bb-status-balance');
+      if (selisih === 0) {
+        statusBal.textContent = 'SEIMBANG (Rp 0)';
+        statusBal.className = 'text-lg font-extrabold text-emerald-700';
+      } else {
+        statusBal.textContent = 'SELISIH ' + window.formatRupiah(selisih);
+        statusBal.className = 'text-lg font-extrabold text-red-600';
+      }
+
+      if (jurnals.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-xs text-brand-sage">Belum ada catatan jurnal umum</td></tr>';
+        return;
+      }
+
+      var html = '';
+      jurnals.forEach(function (j) {
+        var akun = window.appState.data.akun.find(function (a) { return a.id === j.akun_id || a.kode_akun === j.akun_id; });
+        var akKode = akun ? akun.kode_akun : (j.akun_id || '-');
+        var akNama = akun ? akun.nama_akun : 'Akun Kas/Operasional';
+
+        html += '<tr class="hover:bg-brand-cream/50 transition">';
+        html += '  <td class="py-3 px-3 font-mono text-xs font-bold">' + j.nomor_jurnal + '</td>';
+        html += '  <td class="py-3 px-3 text-xs text-brand-sage">' + j.tanggal + '</td>';
+        html += '  <td class="py-3 px-3 text-xs font-bold text-brand-pine">' + akKode + '</td>';
+        html += '  <td class="py-3 px-3 text-xs font-medium">' + akNama + '</td>';
+        html += '  <td class="py-3 px-3 text-xs text-brand-charcoal">' + j.keterangan + '</td>';
+        html += '  <td class="py-3 px-3 text-right text-xs font-semibold ' + (j.debit > 0 ? 'text-brand-pine font-bold' : 'text-gray-400') + '">' + window.formatRupiah(j.debit) + '</td>';
+        html += '  <td class="py-3 px-3 text-right text-xs font-semibold ' + (j.kredit > 0 ? 'text-brand-terracotta font-bold' : 'text-gray-400') + '">' + window.formatRupiah(j.kredit) + '</td>';
+        html += '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    window.filterBukuBesar = function () {
+      renderBukuBesar();
+    };
+
+    window.openJurnalModal = function () {
+      var ket = prompt('Keterangan Jurnal:', 'Setoran Modal Tambahan');
+      if (!ket) return;
+      var deb = Number(prompt('Nilai Debit (Rp):', '500000')) || 0;
+      var kre = Number(prompt('Nilai Kredit (Rp):', '0')) || 0;
+
+      var newJrn = {
+        id: window.DB.newId(),
+        nomor_jurnal: window.DB.nextCode('JRN'),
+        tanggal: new Date().toISOString().split('T')[0],
+        referensi: 'MANUAL',
+        akun_id: '1001',
+        keterangan: ket,
+        debit: deb,
+        kredit: kre
+      };
+
+      if (window.isSupabaseLive) {
+        window.sb.from('buku_besar').insert([newJrn]).then(function () {
+          refreshAllDataLive();
+          window.showToast('Jurnal manual berhasil disimpan', 'success');
+        });
+      } else {
+        window.appState.data.buku_besar.unshift(newJrn);
+        saveMockDatabase();
+        window.showToast('Jurnal manual disimpan lokal', 'success');
+        renderBukuBesar();
+      }
+    };
+
+    /* ==================== EXPORT & REPORTING ==================== */
+    window.printReport = function () {
+      window.print();
+    };
+
+    window.exportToCsv = function () {
+      var rows = [
+        ['Kode Nota', 'Tanggal', 'Kasir', 'Total', 'Bayar', 'Kembalian']
+      ];
+      window.appState.data.transaksi.forEach(function (t) {
+        rows.push([t.kode, t.tanggal, t.kasir_nama || 'Kasir', t.total, t.bayar, t.kembalian]);
+      });
+
+      var csvContent = 'data:text/csv;charset=utf-8,' + rows.map(function (e) { return e.join(','); }).join('\n');
+      var encodedUri = encodeURI(csvContent);
+      var link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', 'Laporan_Penjualan_Sosis_Naga.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.showToast('Laporan berhasil diekspor ke CSV', 'success');
+    };
+
+    /* ==================== USER MANAGEMENT ==================== */
+    function renderUsersTable() {
+      var tbody = document.getElementById('table-users-body');
+      if (!tbody) return;
+
+      var users = window.appState.data.users;
+      var html = '';
+      users.forEach(function (u) {
+        html += '<tr class="hover:bg-brand-cream/50 transition">';
+        html += '  <td class="py-3 px-3 font-bold text-brand-pine">' + (u.nama || '-') + '</td>';
+        html += '  <td class="py-3 px-3 text-xs text-brand-sage">' + u.email + '</td>';
+        html += '  <td class="py-3 px-3 text-center"><span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase ' + (u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-brand-sand text-brand-pine') + '">' + u.role + '</span></td>';
+        html += '  <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ' + (u.aktif ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800') + '">' + (u.aktif ? 'Aktif' : 'Nonaktif') + '</span></td>';
+        html += '  <td class="py-3 px-3 text-center space-x-2">';
+        html += '    <button type="button" onclick="window.toggleUserActive(\'' + u.id + '\')" class="text-xs font-bold text-brand-pine hover:underline">' + (u.aktif ? 'Nonaktifkan' : 'Aktifkan') + '</button>';
+        html += '    <button type="button" onclick="window.deleteUser(\'' + u.id + '\')" class="text-xs font-bold text-red-600 hover:underline">Hapus</button>';
+        html += '  </td>';
+        html += '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    window.openUserModal = function () {
+      document.getElementById('modal-user').classList.remove('hidden');
+    };
+
+    window.closeUserModal = function () {
+      document.getElementById('modal-user').classList.add('hidden');
+    };
+
+    window.handleSaveUser = async function (e) {
+      e.preventDefault();
+      var nama = document.getElementById('user-input-nama').value.trim();
+      var email = document.getElementById('user-input-email').value.trim();
+      var pass = document.getElementById('user-input-password').value.trim();
+      var role = document.getElementById('user-input-role').value;
+
+      if (window.isSupabaseLive && window.hasApi) {
+        try {
+          var token = (await window.sb.auth.getSession()).data.session.access_token;
+          var res = await fetch('/api/admin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ action: 'createUser', nama: nama, email: email, password: pass, role: role })
+          });
+          var data = await res.json();
+          if (!data.success) throw new Error(data.message || 'Gagal membuat user');
+          await refreshAllDataLive();
+          window.showToast('User berhasil dibuat lewat Admin Gateway', 'success');
+        } catch (err) {
+          window.showToast('Gagal: ' + err.message, 'error');
+          return;
+        }
+      } else {
+        window.appState.data.users.push({
+          id: window.DB.newId(),
+          nama: nama,
+          email: email,
+          role: role,
+          aktif: true
+        });
+        saveMockDatabase();
+        window.showToast('User tersimpan di database lokal', 'success');
+      }
+
+      window.closeUserModal();
+      renderUsersTable();
+    };
+
+    window.toggleUserActive = async function (uid) {
+      var user = window.appState.data.users.find(function (u) { return u.id === uid; });
+      if (!user) return;
+      var newAktif = !user.aktif;
+
+      if (window.isSupabaseLive && window.hasApi) {
+        try {
+          var token = (await window.sb.auth.getSession()).data.session.access_token;
+          var res = await fetch('/api/admin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ action: 'setUserActive', uid: uid, aktif: newAktif })
+          });
+          var data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          user.aktif = newAktif;
+          window.showToast('Status user diperbarui', 'success');
+        } catch (err) {
+          window.showToast('Error: ' + err.message, 'error');
+        }
+      } else {
+        user.aktif = newAktif;
+        saveMockDatabase();
+        window.showToast('Status user diperbarui lokal', 'success');
+      }
+      renderUsersTable();
+    };
+
+    window.deleteUser = async function (uid) {
+      if (!confirm('Hapus akun user ini?')) return;
+      if (window.isSupabaseLive && window.hasApi) {
+        try {
+          var token = (await window.sb.auth.getSession()).data.session.access_token;
+          var res = await fetch('/api/admin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ action: 'deleteUser', uid: uid })
+          });
+          var data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          await refreshAllDataLive();
+          window.showToast('User berhasil dihapus', 'success');
+        } catch (err) {
+          window.showToast('Error: ' + err.message, 'error');
+        }
+      } else {
+        var idx = window.appState.data.users.findIndex(function (u) { return u.id === uid; });
+        if (idx !== -1) window.appState.data.users.splice(idx, 1);
+        saveMockDatabase();
+        window.showToast('User dihapus dari demo', 'success');
+      }
+      renderUsersTable();
+    };
+
+    /* ==================== LIVE SUPABASE DATA SYNC ==================== */
+    async function refreshAllDataLive() {
+      if (!window.isSupabaseLive || !window.sb) return;
+      try {
+        var pRes = await window.sb.from('produk').select('*').order('created_at', { ascending: false });
+        if (!pRes.error && pRes.data) window.appState.data.produk = pRes.data;
+
+        var tRes = await window.sb.from('transaksi').select('*').order('tanggal', { ascending: false }).limit(200);
+        if (!tRes.error && tRes.data) window.appState.data.transaksi = tRes.data;
+
+        var dRes = await window.sb.from('detail_transaksi').select('*').limit(500);
+        if (!dRes.error && dRes.data) window.appState.data.detail_transaksi = dRes.data;
+
+        var sRes = await window.sb.from('stok_mutasi').select('*').order('tanggal', { ascending: false }).limit(200);
+        if (!sRes.error && sRes.data) window.appState.data.stok_mutasi = sRes.data;
+
+        var bRes = await window.sb.from('biaya').select('*').order('tanggal', { ascending: false });
+        if (!bRes.error && bRes.data) window.appState.data.biaya = bRes.data;
+
+        var pjRes = await window.sb.from('pajak').select('*').order('periode', { ascending: false });
+        if (!pjRes.error && pjRes.data) window.appState.data.pajak = pjRes.data;
+
+        var akRes = await window.sb.from('akun').select('*').order('kode_akun');
+        if (!akRes.error && akRes.data) window.appState.data.akun = akRes.data;
+
+        var jRes = await window.sb.from('buku_besar').select('*').order('tanggal', { ascending: false }).limit(300);
+        if (!jRes.error && jRes.data) window.appState.data.buku_besar = jRes.data;
+
+        if (window.appState.currentUser && window.appState.currentUser.role === 'admin') {
+          var uRes = await window.sb.from('profiles').select('id,email,nama,role,aktif,created_at');
+          if (!uRes.error && uRes.data) window.appState.data.users = uRes.data;
+        }
+      } catch (err) {
+        console.warn('Sync live data failed:', err);
+      }
+    }
+
+    /* ==================== SYSTEM INITIALIZATION ==================== */
+    window.addEventListener('DOMContentLoaded', async function () {
+      /* 1. Set current date on header */
+      var d = new Date();
+      var dStr = d.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+      var dEl = document.getElementById('current-date-display');
+      if (dEl) dEl.textContent = dStr;
+
+      /* Set date input defaults */
+      var tglInput = document.getElementById('biaya-tanggal');
+      if (tglInput) tglInput.value = d.toISOString().split('T')[0];
+
+      /* 2. Fetch config from Vercel /api/config */
+      await window.loadPublicConfig();
+
+      var isConfigValid = SUPABASE_URL && SUPABASE_URL.indexOf('https://') === 0 &&
+                          SUPABASE_ANON_KEY && SUPABASE_ANON_KEY.indexOf('YOUR_') !== 0 &&
+                          SUPABASE_ANON_KEY.length > 20;
+
+      var banner = document.getElementById('runtime-banner');
+      var modeBadge = document.getElementById('badge-mode-status');
+
+      if (isConfigValid && typeof supabase !== 'undefined') {
+        try {
+          window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storage: safeStorage }
+          });
+          window.isSupabaseLive = true;
+          window.appState.mode = 'live';
+          if (banner) banner.classList.add('hidden');
+          if (modeBadge) {
+            modeBadge.textContent = 'SUPABASE LIVE';
+            modeBadge.className = 'text-xs text-emerald-400 font-bold';
+          }
+
+          /* Check existing session */
+          var sessionRes = await window.sb.auth.getSession();
+          if (sessionRes.data && sessionRes.data.session) {
+            var user = sessionRes.data.session.user;
+            var profRes = await window.sb.from('profiles').select('id,email,nama,role,aktif').eq('id', user.id).single();
+            if (profRes.data && profRes.data.aktif) {
+              setupSession(profRes.data);
+              await refreshAllDataLive();
+            }
+          }
+        } catch (e) {
+          console.warn('Gagal koneksi live Supabase, fallback ke Mock:', e);
+          window.isSupabaseLive = false;
+        }
+      }
+
+      if (!window.isSupabaseLive) {
+        window.appState.mode = 'mock';
+        if (banner) banner.classList.remove('hidden');
+        if (modeBadge) {
+          modeBadge.textContent = 'MODE DEMO';
+          modeBadge.className = 'text-xs text-amber-300 font-bold';
+        }
+        initMockDatabase();
+      }
+    });
+  </script>
+</body>
+</html>
